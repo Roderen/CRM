@@ -1,9 +1,5 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
-  provider = "prisma-client"
-  output   = "../lib/generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
@@ -11,51 +7,50 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id        String   @id @unique // External ID from Clerk
-  email     String   @unique
-  firstName String?
-  lastName  String?
-  imageUrl  String?
-  clients   Client[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
 model Client {
   id        String    @id @default(cuid())
+  userId    String    // ID пользователя из Clerk
   name      String
   email     String?
   phone     String?
   company   String?
-  userId    String
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   projects  Project[]
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 }
 
 model Project {
-  id          String    @id @default(cuid())
+  id          String        @id @default(cuid())
   name        String
   description String?
-  status      String    @default("PLANNED") // PLANNED, IN_PROGRESS, COMPLETED
+  status      ProjectStatus @default(PLANNED)
   deadline    DateTime?
-  budget      Float?
+  client      Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
   clientId    String
-  client      Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
   tasks       Task[]
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
 }
 
 model Task {
-  id          String   @id @default(cuid())
+  id          String     @id @default(cuid())
   title       String
   description String?
-  status      String   @default("TODO") // TODO, IN_PROGRESS, DONE
+  status      TaskStatus @default(TODO)
+  project     Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
   projectId   String
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+enum ProjectStatus {
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  DONE
 }
