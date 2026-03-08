@@ -236,7 +236,11 @@ export default function ClientDetailPage() {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {client.projects.map((project) => (
-                <Card key={project.id}>
+                <Card
+                  key={project.id}
+                  className="hover:bg-accent transition-colors cursor-pointer"
+                  onClick={() => router.push(`/projects/${project.id}`)}
+                >
                   <CardHeader>
                     <div className="flex items-start justify-between gap-2">
                       <CardTitle className="text-base">{project.name}</CardTitle>
