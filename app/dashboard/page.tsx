@@ -34,17 +34,19 @@ export default function DashboardPage() {
             </Card>
           </Link>
 
-          <Card className="opacity-50 cursor-not-allowed">
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <FolderKanban className="h-6 w-6 text-primary" />
-                <div>
-                  <CardTitle>Projects</CardTitle>
-                  <CardDescription>Coming soon</CardDescription>
+          <Link href="/projects">
+            <Card className="hover:bg-accent transition-colors cursor-pointer">
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <FolderKanban className="h-6 w-6 text-primary" />
+                  <div>
+                    <CardTitle>Projects</CardTitle>
+                    <CardDescription>View all projects</CardDescription>
+                  </div>
                 </div>
-              </div>
-            </CardHeader>
-          </Card>
+              </CardHeader>
+            </Card>
+          </Link>
         </div>
       </main>
     </div>
