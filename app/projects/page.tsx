@@ -288,6 +288,7 @@ export default function ProjectsPage() {
   const router = useRouter();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dbError, setDbError] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
 
@@ -296,11 +297,26 @@ export default function ProjectsPage() {
     useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } })
   );
 
+  async function fetchProjects() {
+    setLoading(true);
+    setDbError(false);
+    try {
+      const res = await fetch("/api/projects");
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setProjects(data);
+      } else {
+        setDbError(true);
+      }
+    } catch {
+      setDbError(true);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   useEffect(() => {
-    fetch("/api/projects")
-      .then((res) => res.json())
-      .then((data) => { if (Array.isArray(data)) setProjects(data); })
-      .finally(() => setLoading(false));
+    fetchProjects();
   }, []);
 
   function handleDragStart(event: DragStartEvent) {
@@ -399,6 +415,26 @@ export default function ProjectsPage() {
         {loading ? (
           <div className="flex justify-center py-12">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : dbError ? (
+          <div className="text-center py-12 text-muted-foreground">
+            <p className="text-destructive font-medium mb-1">Database unavailable</p>
+            <p className="text-sm">
+              Your Supabase project may be paused (free tier pauses after 7 days of inactivity).
+              Go to{" "}
+              <a
+                href="https://supabase.com/dashboard"
+                target="_blank"
+                rel="noreferrer"
+                className="underline hover:text-foreground"
+              >
+                supabase.com/dashboard
+              </a>{" "}
+              and resume your project.
+            </p>
+            <Button variant="outline" size="sm" className="mt-4" onClick={fetchProjects}>
+              Retry
+            </Button>
           </div>
         ) : projects.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground">

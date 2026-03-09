@@ -33,6 +33,7 @@ export default function ClientsPage() {
   const router = useRouter();
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dbError, setDbError] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({ name: "", email: "", phone: "", company: "", dealAmount: "" });
@@ -61,10 +62,17 @@ export default function ClientsPage() {
 
   async function fetchClients() {
     setLoading(true);
+    setDbError(false);
     try {
       const res = await fetch("/api/clients");
       const data = await res.json();
-      if (Array.isArray(data)) setClients(data);
+      if (Array.isArray(data)) {
+        setClients(data);
+      } else {
+        setDbError(true);
+      }
+    } catch {
+      setDbError(true);
     } finally {
       setLoading(false);
     }
@@ -237,6 +245,26 @@ export default function ClientsPage() {
         {loading ? (
           <div className="flex justify-center py-12">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : dbError ? (
+          <div className="text-center py-12 text-muted-foreground">
+            <p className="text-destructive font-medium mb-1">Database unavailable</p>
+            <p className="text-sm">
+              Your Supabase project may be paused (free tier pauses after 7 days of inactivity).
+              Go to{" "}
+              <a
+                href="https://supabase.com/dashboard"
+                target="_blank"
+                rel="noreferrer"
+                className="underline hover:text-foreground"
+              >
+                supabase.com/dashboard
+              </a>{" "}
+              and resume your project.
+            </p>
+            <Button variant="outline" size="sm" className="mt-4" onClick={fetchClients}>
+              Retry
+            </Button>
           </div>
         ) : clients.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground">
