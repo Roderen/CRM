@@ -41,12 +41,17 @@ interface Project {
   description: string | null;
   status: ProjectStatus;
   deadline: string | null;
+  budget: number | null;
   createdAt: string;
   client: {
     id: string;
     name: string;
     company: string | null;
   };
+}
+
+function fmt(n: number) {
+  return new Intl.NumberFormat("ru-RU", { style: "currency", currency: "RUB", maximumFractionDigits: 0 }).format(n);
 }
 
 const COLUMNS: { id: ProjectStatus; label: string; color: string; headerColor: string }[] = [
@@ -158,6 +163,9 @@ function ProjectCard({
                 {project.deadline && (
                   <p>⏱ {new Date(project.deadline).toLocaleDateString()}</p>
                 )}
+                {project.budget != null && (
+                  <p className="text-green-600 font-medium">{fmt(project.budget)}</p>
+                )}
               </CardDescription>
             </div>
             <div
@@ -196,7 +204,7 @@ function EditCard({
   onCancel,
 }: {
   project: Project;
-  onSave: (id: string, data: { name: string; description: string; deadline: string; status: ProjectStatus }) => Promise<void>;
+  onSave: (id: string, data: { name: string; description: string; deadline: string; status: ProjectStatus; budget: string }) => Promise<void>;
   onCancel: () => void;
 }) {
   const [form, setForm] = useState({
@@ -204,6 +212,7 @@ function EditCard({
     description: project.description ?? "",
     deadline: project.deadline ? project.deadline.slice(0, 10) : "",
     status: project.status,
+    budget: project.budget != null ? String(project.budget) : "",
   });
   const [submitting, setSubmitting] = useState(false);
 
@@ -242,6 +251,18 @@ function EditCard({
               value={form.deadline}
               onChange={(e) => setForm((f) => ({ ...f, deadline: e.target.value }))}
               className="h-7 text-sm"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Budget (₽)</Label>
+            <Input
+              type="number"
+              min="0"
+              step="any"
+              value={form.budget}
+              onChange={(e) => setForm((f) => ({ ...f, budget: e.target.value }))}
+              className="h-7 text-sm"
+              placeholder="0"
             />
           </div>
           <div className="flex gap-2 justify-end pt-1">
@@ -314,7 +335,7 @@ export default function ProjectsPage() {
 
   async function handleSave(
     id: string,
-    data: { name: string; description: string; deadline: string; status: ProjectStatus }
+    data: { name: string; description: string; deadline: string; status: ProjectStatus; budget: string }
   ) {
     const res = await fetch(`/api/projects/${id}`, {
       method: "PATCH",

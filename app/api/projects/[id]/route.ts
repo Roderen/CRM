@@ -15,7 +15,7 @@ export async function PATCH(
 
   const { id } = await params;
   const body = await request.json();
-  const { name, description, deadline, status } = body;
+  const { name, description, deadline, status, budget } = body;
 
   if (!name) {
     return NextResponse.json({ error: "Name is required" }, { status: 400 });
@@ -40,6 +40,7 @@ export async function PATCH(
       description: description || null,
       deadline: deadline ? new Date(deadline) : null,
       status: status ?? existing.status,
+      budget: budget !== undefined ? (budget ? parseFloat(budget) : null) : existing.budget,
     },
   });
 

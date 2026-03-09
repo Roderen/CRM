@@ -42,7 +42,7 @@ export async function PATCH(
 
   const { id } = await params;
   const body = await request.json();
-  const { name, email, phone, company } = body;
+  const { name, email, phone, company, dealAmount } = body;
 
   if (!name) {
     return NextResponse.json({ error: "Name is required" }, { status: 400 });
@@ -55,7 +55,13 @@ export async function PATCH(
 
   const updated = await prisma.client.update({
     where: { id },
-    data: { name, email: email || null, phone: phone || null, company: company || null },
+    data: {
+      name,
+      email: email || null,
+      phone: phone || null,
+      company: company || null,
+      dealAmount: dealAmount ? parseFloat(dealAmount) : null,
+    },
   });
 
   return NextResponse.json(updated);

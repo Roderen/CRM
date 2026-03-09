@@ -20,7 +20,12 @@ interface Client {
   email: string | null;
   phone: string | null;
   company: string | null;
+  dealAmount: number | null;
   createdAt: string;
+}
+
+function fmt(n: number) {
+  return new Intl.NumberFormat("ru-RU", { style: "currency", currency: "RUB", maximumFractionDigits: 0 }).format(n);
 }
 
 export default function ClientsPage() {
@@ -29,10 +34,10 @@ export default function ClientsPage() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [form, setForm] = useState({ name: "", email: "", phone: "", company: "" });
+  const [form, setForm] = useState({ name: "", email: "", phone: "", company: "", dealAmount: "" });
 
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({ name: "", email: "", phone: "", company: "" });
+  const [editForm, setEditForm] = useState({ name: "", email: "", phone: "", company: "", dealAmount: "" });
   const [editSubmitting, setEditSubmitting] = useState(false);
 
   useEffect(() => {
@@ -62,7 +67,7 @@ export default function ClientsPage() {
         body: JSON.stringify(form),
       });
       if (res.ok) {
-        setForm({ name: "", email: "", phone: "", company: "" });
+        setForm({ name: "", email: "", phone: "", company: "", dealAmount: "" });
         setShowForm(false);
         await fetchClients();
       }
@@ -79,6 +84,7 @@ export default function ClientsPage() {
       email: client.email ?? "",
       phone: client.phone ?? "",
       company: client.company ?? "",
+      dealAmount: client.dealAmount != null ? String(client.dealAmount) : "",
     });
   }
 
@@ -177,6 +183,18 @@ export default function ClientsPage() {
                       placeholder="+1 234 567 890"
                     />
                   </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="dealAmount">Deal Amount (₽)</Label>
+                    <Input
+                      id="dealAmount"
+                      type="number"
+                      min="0"
+                      step="any"
+                      value={form.dealAmount}
+                      onChange={(e) => setForm((f) => ({ ...f, dealAmount: e.target.value }))}
+                      placeholder="0"
+                    />
+                  </div>
                 </div>
                 <div className="flex gap-2 justify-end">
                   <Button type="button" variant="outline" onClick={() => setShowForm(false)}>
@@ -243,6 +261,17 @@ export default function ClientsPage() {
                             onChange={(e) => setEditForm((f) => ({ ...f, phone: e.target.value }))}
                           />
                         </div>
+                        <div className="space-y-1 sm:col-span-2">
+                          <Label>Deal Amount (₽)</Label>
+                          <Input
+                            type="number"
+                            min="0"
+                            step="any"
+                            value={editForm.dealAmount}
+                            onChange={(e) => setEditForm((f) => ({ ...f, dealAmount: e.target.value }))}
+                            placeholder="0"
+                          />
+                        </div>
                       </div>
                       <div className="flex gap-2 justify-end">
                         <Button
@@ -275,6 +304,9 @@ export default function ClientsPage() {
                           {client.company && <p>{client.company}</p>}
                           {client.email && <p>{client.email}</p>}
                           {client.phone && <p>{client.phone}</p>}
+                          {client.dealAmount != null && (
+                            <p className="text-green-600 font-medium">{fmt(client.dealAmount)}</p>
+                          )}
                         </CardDescription>
                       </div>
                       <div className="flex gap-1 shrink-0">

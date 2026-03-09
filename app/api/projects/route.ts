@@ -26,7 +26,7 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
-  const { name, description, clientId, deadline, status } = body;
+  const { name, description, clientId, deadline, status, budget } = body;
 
   if (!name || !clientId) {
     return NextResponse.json(
@@ -51,6 +51,7 @@ export async function POST(request: Request) {
       clientId,
       deadline: deadline ? new Date(deadline) : null,
       status: status ?? "PLANNED",
+      budget: budget ? parseFloat(budget) : null,
     },
   });
 

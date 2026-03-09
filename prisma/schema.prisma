@@ -8,15 +8,16 @@ datasource db {
 }
 
 model Client {
-  id        String    @id @default(cuid())
-  userId    String    // ID пользователя из Clerk
-  name      String
-  email     String?
-  phone     String?
-  company   String?
-  projects  Project[]
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id          String    @id @default(cuid())
+  userId      String    // ID пользователя из Clerk
+  name        String
+  email       String?
+  phone       String?
+  company     String?
+  dealAmount  Float?    // сумма сделки
+  projects    Project[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }
 
 model Project {
@@ -25,6 +26,7 @@ model Project {
   description String?
   status      ProjectStatus @default(PLANNED)
   deadline    DateTime?
+  budget      Float?        // бюджет проекта
   client      Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
   clientId    String
   tasks       Task[]
