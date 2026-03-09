@@ -27,6 +27,7 @@ model Project {
   status      ProjectStatus @default(PLANNED)
   deadline    DateTime?
   budget      Float?        // бюджет проекта
+  notes       String?       // markdown заметки по проекту
   client      Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
   clientId    String
   tasks       Task[]
