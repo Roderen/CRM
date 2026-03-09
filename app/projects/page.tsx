@@ -51,7 +51,7 @@ interface Project {
 }
 
 function fmt(n: number) {
-  return new Intl.NumberFormat("ru-RU", { style: "currency", currency: "RUB", maximumFractionDigits: 0 }).format(n);
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
 }
 
 const COLUMNS: { id: ProjectStatus; label: string; color: string; headerColor: string }[] = [
