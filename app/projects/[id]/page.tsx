@@ -6,15 +6,22 @@ import {
   DndContext,
   DragOverlay,
   PointerSensor,
-  useDraggable,
+  TouchSensor,
   useDroppable,
   useSensor,
   useSensors,
+  closestCenter,
 } from "@dnd-kit/core";
-import type { DragEndEvent, DragStartEvent } from "@dnd-kit/core";
+import type { DragEndEvent, DragStartEvent, DragOverEvent } from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { Loader2, Plus, X, GripVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -26,6 +33,7 @@ interface Task {
   title: string;
   description: string | null;
   status: TaskStatus;
+  position: number;
 }
 
 interface Project {
@@ -38,25 +46,38 @@ interface Project {
 
 // ─── Column config ─────────────────────────────────────────────────────────────
 
-const COLUMNS: { status: TaskStatus; label: string; color: string }[] = [
-  { status: "TODO", label: "To Do", color: "bg-slate-50 border-slate-200" },
+const COLUMNS: { status: TaskStatus; label: string; color: string; headerColor: string }[] = [
+  {
+    status: "TODO",
+    label: "To Do",
+    color: "bg-slate-50 border-slate-200",
+    headerColor: "bg-slate-200 text-slate-700",
+  },
   {
     status: "IN_PROGRESS",
     label: "In Progress",
     color: "bg-blue-50 border-blue-200",
+    headerColor: "bg-blue-200 text-blue-800",
   },
-  { status: "DONE", label: "Done", color: "bg-green-50 border-green-200" },
+  {
+    status: "DONE",
+    label: "Done",
+    color: "bg-green-50 border-green-200",
+    headerColor: "bg-green-200 text-green-800",
+  },
 ];
+
+const COLUMN_IDS = new Set<string>(COLUMNS.map((c) => c.status));
 
 // ─── TaskCard ──────────────────────────────────────────────────────────────────
 
 function TaskCard({ task, overlay }: { task: Task; overlay?: boolean }) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } =
-    useDraggable({ id: task.id, data: { status: task.status } });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: task.id });
 
-  const style = transform
-    ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` }
-    : undefined;
+  const style = overlay
+    ? undefined
+    : { transform: CSS.Transform.toString(transform), transition };
 
   return (
     <div
@@ -65,21 +86,21 @@ function TaskCard({ task, overlay }: { task: Task; overlay?: boolean }) {
       className={[
         "bg-white border rounded-lg p-3 select-none",
         overlay
-          ? "shadow-lg rotate-1 cursor-grabbing"
+          ? "shadow-xl rotate-1 cursor-grabbing"
           : "cursor-grab shadow-sm hover:shadow-md transition-shadow",
-        isDragging && !overlay ? "opacity-40" : "",
+        isDragging && !overlay ? "opacity-30" : "",
       ]
         .filter(Boolean)
         .join(" ")}
     >
       <div className="flex items-start gap-2">
-        <div
+        <button
           {...listeners}
           {...attributes}
-          className="mt-0.5 text-muted-foreground shrink-0"
+          className="mt-0.5 text-muted-foreground shrink-0 cursor-grab active:cursor-grabbing"
         >
           <GripVertical className="h-4 w-4" />
-        </div>
+        </button>
         <p className="text-sm leading-snug">{task.title}</p>
       </div>
       {task.description && (
@@ -97,6 +118,7 @@ function KanbanColumn({
   status,
   label,
   colorClass,
+  headerColor,
   tasks,
   isAdding,
   newTitle,
@@ -109,6 +131,7 @@ function KanbanColumn({
   status: TaskStatus;
   label: string;
   colorClass: string;
+  headerColor: string;
   tasks: Task[];
   isAdding: boolean;
   newTitle: string;
@@ -121,18 +144,18 @@ function KanbanColumn({
   const { setNodeRef, isOver } = useDroppable({ id: status });
 
   return (
-    <div className="flex flex-col min-w-0 flex-1">
+    <div className="flex flex-col min-w-[260px] flex-1">
       {/* Column header */}
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="font-semibold text-sm text-foreground">
+      <div
+        className={`flex items-center justify-between px-3 py-2 rounded-t-lg ${headerColor}`}
+      >
+        <span className="font-semibold text-sm">
           {label}
-          <span className="ml-2 text-muted-foreground font-normal">
-            {tasks.length}
-          </span>
-        </h3>
+          <span className="ml-2 font-normal opacity-70">{tasks.length}</span>
+        </span>
         <button
           onClick={onAddClick}
-          className="text-muted-foreground hover:text-foreground transition-colors"
+          className="opacity-70 hover:opacity-100 transition-opacity"
           title="Add task"
         >
           <Plus className="h-4 w-4" />
@@ -143,20 +166,28 @@ function KanbanColumn({
       <div
         ref={setNodeRef}
         className={[
-          "flex-1 rounded-xl border-2 border-dashed p-3 space-y-2 min-h-48 transition-colors",
+          "flex-1 border border-t-0 rounded-b-lg p-2 space-y-2 min-h-48 transition-colors",
           colorClass,
-          isOver ? "border-primary/50 bg-primary/5" : "",
+          isOver ? "ring-2 ring-inset ring-primary/30" : "",
         ]
           .filter(Boolean)
           .join(" ")}
       >
-        {tasks.map((task) => (
-          <TaskCard key={task.id} task={task} />
-        ))}
+        <SortableContext
+          items={tasks.map((t) => t.id)}
+          strategy={verticalListSortingStrategy}
+        >
+          {tasks.map((task) => (
+            <TaskCard key={task.id} task={task} />
+          ))}
+        </SortableContext>
 
         {/* Inline add form */}
         {isAdding && (
-          <form onSubmit={onSubmit} className="bg-white border rounded-lg p-2 shadow-sm space-y-2">
+          <form
+            onSubmit={onSubmit}
+            className="bg-white border rounded-lg p-2 shadow-sm space-y-2"
+          >
             <Input
               autoFocus
               value={newTitle}
@@ -171,11 +202,7 @@ function KanbanColumn({
                 className="h-7 text-xs"
                 disabled={submitting || !newTitle.trim()}
               >
-                {submitting ? (
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                ) : (
-                  "Add"
-                )}
+                {submitting ? <Loader2 className="h-3 w-3 animate-spin" /> : "Add"}
               </Button>
               <button
                 type="button"
@@ -189,6 +216,23 @@ function KanbanColumn({
         )}
       </div>
     </div>
+  );
+}
+
+// ─── Helpers ───────────────────────────────────────────────────────────────────
+
+function colTasks(tasks: Task[], status: TaskStatus) {
+  return tasks.filter((t) => t.status === status);
+}
+
+function assignPositions(tasks: Task[]): Task[] {
+  const grouped: Record<string, Task[]> = {};
+  for (const t of tasks) {
+    if (!grouped[t.status]) grouped[t.status] = [];
+    grouped[t.status].push(t);
+  }
+  return Object.values(grouped).flatMap((col) =>
+    col.map((t, i) => ({ ...t, position: i }))
   );
 }
 
@@ -208,7 +252,8 @@ export default function ProjectPage() {
   const [submitting, setSubmitting] = useState(false);
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } })
   );
 
   useEffect(() => {
@@ -220,13 +265,10 @@ export default function ProjectPage() {
     setLoading(true);
     try {
       const res = await fetch(`/api/projects/${id}/tasks`);
-      if (res.status === 404) {
-        setNotFound(true);
-        return;
-      }
+      if (res.status === 404) { setNotFound(true); return; }
       const data: Project = await res.json();
       setProject(data);
-      setTasks(data.tasks);
+      setTasks(assignPositions(data.tasks));
     } finally {
       setLoading(false);
     }
@@ -238,32 +280,76 @@ export default function ProjectPage() {
     setActiveTask(tasks.find((t) => t.id === active.id) ?? null);
   }
 
+  // Live preview while dragging over another column
+  function handleDragOver({ active, over }: DragOverEvent) {
+    if (!over) return;
+    const activeId = active.id as string;
+    const overId = over.id as string;
+    const activeTask = tasks.find((t) => t.id === activeId);
+    if (!activeTask) return;
+
+    const targetStatus = COLUMN_IDS.has(overId)
+      ? (overId as TaskStatus)
+      : tasks.find((t) => t.id === overId)?.status;
+
+    if (!targetStatus || targetStatus === activeTask.status) return;
+
+    setTasks((prev) =>
+      prev.map((t) => (t.id === activeId ? { ...t, status: targetStatus } : t))
+    );
+  }
+
   async function handleDragEnd({ active, over }: DragEndEvent) {
     setActiveTask(null);
     if (!over) return;
 
-    const taskId = active.id as string;
-    const newStatus = over.id as TaskStatus;
-    const task = tasks.find((t) => t.id === taskId);
-    if (!task || task.status === newStatus) return;
+    const activeId = active.id as string;
+    const overId = over.id as string;
 
-    // Optimistic update
-    setTasks((prev) =>
-      prev.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t))
-    );
+    setTasks((prev) => {
+      const activeTask = prev.find((t) => t.id === activeId);
+      if (!activeTask) return prev;
 
-    const res = await fetch(`/api/tasks/${taskId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: newStatus }),
+      const targetStatus: TaskStatus = COLUMN_IDS.has(overId)
+        ? (overId as TaskStatus)
+        : (prev.find((t) => t.id === overId)?.status ?? activeTask.status);
+
+      // Build per-column arrays
+      const srcCol = colTasks(prev, activeTask.status);
+      const dstCol =
+        activeTask.status === targetStatus ? srcCol : colTasks(prev, targetStatus);
+
+      if (activeTask.status === targetStatus) {
+        // Same column — reorder
+        const fromIdx = srcCol.findIndex((t) => t.id === activeId);
+        const toIdx = COLUMN_IDS.has(overId)
+          ? srcCol.length - 1
+          : srcCol.findIndex((t) => t.id === overId);
+        if (fromIdx === toIdx) return prev;
+
+        const reordered = arrayMove(srcCol, fromIdx, toIdx);
+        const rest = prev.filter((t) => t.status !== targetStatus);
+        return assignPositions([...rest, ...reordered]);
+      } else {
+        // Cross-column move (status already updated in onDragOver)
+        // Just re-derive positions
+        return assignPositions(prev);
+      }
     });
 
-    if (!res.ok) {
-      // Revert on failure
-      setTasks((prev) =>
-        prev.map((t) => (t.id === taskId ? { ...t, status: task.status } : t))
-      );
-    }
+    // Persist after state settles
+    setTimeout(async () => {
+      setTasks((current) => {
+        void fetch("/api/tasks/reorder", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            tasks: current.map(({ id, status, position }) => ({ id, status, position })),
+          }),
+        });
+        return current;
+      });
+    }, 0);
   }
 
   // ── Add task ───────────────────────────────────────────────────────────────
@@ -281,8 +367,10 @@ export default function ProjectPage() {
       });
       if (res.ok) {
         const task: Task = await res.json();
-        // Override status to match the column the user added from
-        setTasks((prev) => [...prev, { ...task, status: addingToColumn }]);
+        setTasks((prev) => [
+          ...prev,
+          { ...task, status: addingToColumn, position: colTasks(prev, addingToColumn).length },
+        ]);
         setNewTaskTitle("");
         setAddingToColumn(null);
       }
@@ -291,7 +379,7 @@ export default function ProjectPage() {
     }
   }
 
-  // ── Render states ──────────────────────────────────────────────────────────
+  // ── Render ──────────────────────────────────────────────────────────────────
 
   if (loading) {
     return (
@@ -314,7 +402,6 @@ export default function ProjectPage() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Header */}
       <header className="border-b px-6 py-4 flex items-center gap-3">
         <button
           onClick={() => router.push("/clients")}
@@ -333,35 +420,34 @@ export default function ProjectPage() {
         <h1 className="text-base font-semibold">{project.name}</h1>
       </header>
 
-      {/* Kanban board */}
       <main className="flex-1 p-6 overflow-x-auto">
         <DndContext
           sensors={sensors}
+          collisionDetection={closestCenter}
           onDragStart={handleDragStart}
+          onDragOver={handleDragOver}
           onDragEnd={handleDragEnd}
-          onDragCancel={() => setActiveTask(null)}
+          onDragCancel={() => {
+            setActiveTask(null);
+            fetchProject(); // revert to server state
+          }}
         >
-          <div className="flex gap-5 min-w-max sm:min-w-0 h-full">
-            {COLUMNS.map(({ status, label, color }) => (
+          <div className="flex gap-4 min-w-max sm:min-w-0">
+            {COLUMNS.map(({ status, label, color, headerColor }) => (
               <KanbanColumn
                 key={status}
                 status={status}
                 label={label}
                 colorClass={color}
-                tasks={tasks.filter((t) => t.status === status)}
+                headerColor={headerColor}
+                tasks={colTasks(tasks, status)}
                 isAdding={addingToColumn === status}
                 newTitle={addingToColumn === status ? newTaskTitle : ""}
                 submitting={submitting}
-                onAddClick={() => {
-                  setAddingToColumn(status);
-                  setNewTaskTitle("");
-                }}
+                onAddClick={() => { setAddingToColumn(status); setNewTaskTitle(""); }}
                 onTitleChange={setNewTaskTitle}
                 onSubmit={handleAddTask}
-                onCancelAdd={() => {
-                  setAddingToColumn(null);
-                  setNewTaskTitle("");
-                }}
+                onCancelAdd={() => { setAddingToColumn(null); setNewTaskTitle(""); }}
               />
             ))}
           </div>
