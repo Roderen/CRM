@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Loader2, Building2, Pencil, Trash2, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/theme-toggle";
 import {
   Card,
   CardHeader,
@@ -152,7 +153,8 @@ export default function ClientsPage() {
           <span className="text-muted-foreground">/</span>
           <h1 className="text-xl font-semibold whitespace-nowrap">Clients</h1>
         </div>
-        <div className="flex gap-2 shrink-0">
+        <div className="flex gap-2 shrink-0 items-center">
+          <ThemeToggle />
           {clients.length > 0 && (
             <Button variant="outline" size="sm" onClick={handleExport}>
               <Download className="h-4 w-4 mr-1" />

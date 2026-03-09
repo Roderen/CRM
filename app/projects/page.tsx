@@ -21,6 +21,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { downloadCSV } from "@/lib/export";
+import { ThemeToggle } from "@/components/theme-toggle";
 import {
   DndContext,
   DragEndEvent,
@@ -403,12 +404,15 @@ export default function ProjectsPage() {
         </button>
         <span className="text-muted-foreground shrink-0">/</span>
         <h1 className="text-xl font-semibold whitespace-nowrap shrink-0">Projects</h1>
-        {projects.length > 0 && (
-          <Button variant="outline" size="sm" onClick={handleExport} className="ml-auto shrink-0">
-            <Download className="h-4 w-4 mr-1" />
-            Export CSV
-          </Button>
-        )}
+        <div className="ml-auto flex items-center gap-2 shrink-0">
+          <ThemeToggle />
+          {projects.length > 0 && (
+            <Button variant="outline" size="sm" onClick={handleExport}>
+              <Download className="h-4 w-4 mr-1" />
+              Export CSV
+            </Button>
+          )}
+        </div>
       </header>
 
       <main className="p-6">

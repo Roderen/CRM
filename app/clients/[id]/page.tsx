@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Plus, Loader2, FolderOpen, Pencil, Trash2, Phone, Users, Mail, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/theme-toggle";
 import {
   Card,
   CardHeader,
@@ -275,10 +276,13 @@ export default function ClientDetailPage() {
           <span className="text-muted-foreground">/</span>
           <h1 className="text-xl font-semibold whitespace-nowrap">{client.name}</h1>
         </div>
-        <Button onClick={() => setShowForm((v) => !v)} size="sm" className="shrink-0">
-          <Plus className="h-4 w-4 mr-1" />
-          Add Project
-        </Button>
+        <div className="flex items-center gap-2 shrink-0">
+          <ThemeToggle />
+          <Button onClick={() => setShowForm((v) => !v)} size="sm">
+            <Plus className="h-4 w-4 mr-1" />
+            Add Project
+          </Button>
+        </div>
       </header>
 
       <main className="p-6 max-w-4xl mx-auto space-y-6">

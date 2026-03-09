@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { UserButton } from "@clerk/nextjs";
 import Link from "next/link";
 import { Users, FolderKanban, CheckSquare, Loader2 } from "lucide-react";
+import { ThemeToggle } from "@/components/theme-toggle";
 import {
   Card,
   CardHeader,
@@ -38,7 +39,10 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-background">
       <header className="border-b px-6 py-4 flex items-center justify-between">
         <h1 className="text-xl font-semibold">CRM Dashboard</h1>
-        <UserButton />
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+          <UserButton />
+        </div>
       </header>
 
       <main className="p-6 max-w-4xl mx-auto space-y-8">

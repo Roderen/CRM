@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { Loader2, Check, Paperclip, Upload, X, Download, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 const TiptapEditor = dynamic(() => import("@/components/tiptap-editor"), {
   ssr: false,
@@ -174,10 +175,13 @@ export default function ProjectPage() {
           <span className="text-muted-foreground">/</span>
           <h1 className="text-base font-semibold">{project.name}</h1>
         </div>
-        <div className="flex items-center gap-1.5 text-sm text-muted-foreground min-w-[80px] justify-end">
-          {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-          {saved && !saving && <Check className="h-3.5 w-3.5 text-green-500" />}
-          <span>{saving ? "Saving…" : saved ? "Saved" : ""}</span>
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+            {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+            {saved && !saving && <Check className="h-3.5 w-3.5 text-green-500" />}
+            <span>{saving ? "Saving…" : saved ? "Saved" : ""}</span>
+          </div>
+          <ThemeToggle />
         </div>
       </header>
 
