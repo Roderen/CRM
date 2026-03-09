@@ -29,3 +29,56 @@ export async function GET(
 
   return NextResponse.json(client);
 }
+
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { userId } = await auth();
+
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { id } = await params;
+  const body = await request.json();
+  const { name, email, phone, company } = body;
+
+  if (!name) {
+    return NextResponse.json({ error: "Name is required" }, { status: 400 });
+  }
+
+  const existing = await prisma.client.findFirst({ where: { id, userId } });
+  if (!existing) {
+    return NextResponse.json({ error: "Client not found" }, { status: 404 });
+  }
+
+  const updated = await prisma.client.update({
+    where: { id },
+    data: { name, email: email || null, phone: phone || null, company: company || null },
+  });
+
+  return NextResponse.json(updated);
+}
+
+export async function DELETE(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { userId } = await auth();
+
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { id } = await params;
+
+  const existing = await prisma.client.findFirst({ where: { id, userId } });
+  if (!existing) {
+    return NextResponse.json({ error: "Client not found" }, { status: 404 });
+  }
+
+  await prisma.client.delete({ where: { id } });
+
+  return new NextResponse(null, { status: 204 });
+}

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Loader2, Building2 } from "lucide-react";
+import { Plus, Loader2, Building2, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -29,12 +29,11 @@ export default function ClientsPage() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [form, setForm] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    company: "",
-  });
+  const [form, setForm] = useState({ name: "", email: "", phone: "", company: "" });
+
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ name: "", email: "", phone: "", company: "" });
+  const [editSubmitting, setEditSubmitting] = useState(false);
 
   useEffect(() => {
     fetchClients();
@@ -72,6 +71,45 @@ export default function ClientsPage() {
     }
   }
 
+  function startEdit(client: Client, e: React.MouseEvent) {
+    e.stopPropagation();
+    setEditingId(client.id);
+    setEditForm({
+      name: client.name,
+      email: client.email ?? "",
+      phone: client.phone ?? "",
+      company: client.company ?? "",
+    });
+  }
+
+  async function handleEditSubmit(e: React.FormEvent, id: string) {
+    e.preventDefault();
+    if (!editForm.name.trim()) return;
+
+    setEditSubmitting(true);
+    try {
+      const res = await fetch(`/api/clients/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editForm),
+      });
+      if (res.ok) {
+        setEditingId(null);
+        await fetchClients();
+      }
+    } finally {
+      setEditSubmitting(false);
+    }
+  }
+
+  async function handleDelete(id: string, e: React.MouseEvent) {
+    e.stopPropagation();
+    if (!confirm("Delete this client? All their projects and tasks will be deleted too.")) return;
+
+    await fetch(`/api/clients/${id}`, { method: "DELETE" });
+    setClients((prev) => prev.filter((c) => c.id !== id));
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b px-6 py-4 flex items-center justify-between">
@@ -106,9 +144,7 @@ export default function ClientsPage() {
                     <Input
                       id="name"
                       value={form.name}
-                      onChange={(e) =>
-                        setForm((f) => ({ ...f, name: e.target.value }))
-                      }
+                      onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                       placeholder="John Doe"
                       required
                     />
@@ -118,9 +154,7 @@ export default function ClientsPage() {
                     <Input
                       id="company"
                       value={form.company}
-                      onChange={(e) =>
-                        setForm((f) => ({ ...f, company: e.target.value }))
-                      }
+                      onChange={(e) => setForm((f) => ({ ...f, company: e.target.value }))}
                       placeholder="Acme Inc."
                     />
                   </div>
@@ -130,9 +164,7 @@ export default function ClientsPage() {
                       id="email"
                       type="email"
                       value={form.email}
-                      onChange={(e) =>
-                        setForm((f) => ({ ...f, email: e.target.value }))
-                      }
+                      onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
                       placeholder="john@example.com"
                     />
                   </div>
@@ -141,25 +173,17 @@ export default function ClientsPage() {
                     <Input
                       id="phone"
                       value={form.phone}
-                      onChange={(e) =>
-                        setForm((f) => ({ ...f, phone: e.target.value }))
-                      }
+                      onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
                       placeholder="+1 234 567 890"
                     />
                   </div>
                 </div>
                 <div className="flex gap-2 justify-end">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setShowForm(false)}
-                  >
+                  <Button type="button" variant="outline" onClick={() => setShowForm(false)}>
                     Cancel
                   </Button>
                   <Button type="submit" disabled={submitting}>
-                    {submitting && (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    )}
+                    {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                     Create Client
                   </Button>
                 </div>
@@ -180,22 +204,102 @@ export default function ClientsPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {clients.map((client) => (
-              <Card
-                key={client.id}
-                className="hover:bg-accent transition-colors cursor-pointer"
-                onClick={() => router.push(`/clients/${client.id}`)}
-              >
-                <CardHeader>
-                  <CardTitle className="text-base">{client.name}</CardTitle>
-                  <CardDescription className="space-y-0.5">
-                    {client.company && <p>{client.company}</p>}
-                    {client.email && <p>{client.email}</p>}
-                    {client.phone && <p>{client.phone}</p>}
-                  </CardDescription>
-                </CardHeader>
-              </Card>
-            ))}
+            {clients.map((client) =>
+              editingId === client.id ? (
+                <Card key={client.id}>
+                  <CardContent className="pt-4">
+                    <form
+                      onSubmit={(e) => handleEditSubmit(e, client.id)}
+                      className="space-y-3"
+                    >
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <Label>Name *</Label>
+                          <Input
+                            value={editForm.name}
+                            onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
+                            required
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label>Company</Label>
+                          <Input
+                            value={editForm.company}
+                            onChange={(e) => setEditForm((f) => ({ ...f, company: e.target.value }))}
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label>Email</Label>
+                          <Input
+                            type="email"
+                            value={editForm.email}
+                            onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))}
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label>Phone</Label>
+                          <Input
+                            value={editForm.phone}
+                            onChange={(e) => setEditForm((f) => ({ ...f, phone: e.target.value }))}
+                          />
+                        </div>
+                      </div>
+                      <div className="flex gap-2 justify-end">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setEditingId(null)}
+                        >
+                          Cancel
+                        </Button>
+                        <Button type="submit" size="sm" disabled={editSubmitting}>
+                          {editSubmitting && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
+                          Save
+                        </Button>
+                      </div>
+                    </form>
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card
+                  key={client.id}
+                  className="hover:bg-accent transition-colors cursor-pointer"
+                  onClick={() => router.push(`/clients/${client.id}`)}
+                >
+                  <CardHeader>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <CardTitle className="text-base">{client.name}</CardTitle>
+                        <CardDescription className="space-y-0.5 mt-1">
+                          {client.company && <p>{client.company}</p>}
+                          {client.email && <p>{client.email}</p>}
+                          {client.phone && <p>{client.phone}</p>}
+                        </CardDescription>
+                      </div>
+                      <div className="flex gap-1 shrink-0">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={(e) => startEdit(client, e)}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-destructive hover:text-destructive"
+                          onClick={(e) => handleDelete(client.id, e)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardHeader>
+                </Card>
+              )
+            )}
           </div>
         )}
       </main>

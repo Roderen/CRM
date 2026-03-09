@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Plus, Loader2, FolderOpen } from "lucide-react";
+import { Plus, Loader2, FolderOpen, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -55,11 +55,16 @@ export default function ClientDetailPage() {
   const [notFound, setNotFound] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [form, setForm] = useState({
+  const [form, setForm] = useState({ name: "", description: "", deadline: "" });
+
+  const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({
     name: "",
     description: "",
     deadline: "",
+    status: "PLANNED" as ProjectStatus,
   });
+  const [editSubmitting, setEditSubmitting] = useState(false);
 
   useEffect(() => {
     fetchClient();
@@ -107,6 +112,54 @@ export default function ClientDetailPage() {
     }
   }
 
+  function startEditProject(project: Project, e: React.MouseEvent) {
+    e.stopPropagation();
+    setEditingProjectId(project.id);
+    setEditForm({
+      name: project.name,
+      description: project.description ?? "",
+      deadline: project.deadline ? project.deadline.slice(0, 10) : "",
+      status: project.status,
+    });
+  }
+
+  async function handleEditProject(e: React.FormEvent, projectId: string) {
+    e.preventDefault();
+    if (!editForm.name.trim()) return;
+
+    setEditSubmitting(true);
+    try {
+      const res = await fetch(`/api/projects/${projectId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editForm),
+      });
+      if (res.ok) {
+        setEditingProjectId(null);
+        await fetchClient();
+      }
+    } finally {
+      setEditSubmitting(false);
+    }
+  }
+
+  async function handleDeleteProject(projectId: string, e: React.MouseEvent) {
+    e.stopPropagation();
+    if (!confirm("Delete this project? All tasks will be deleted too.")) return;
+
+    await fetch(`/api/projects/${projectId}`, { method: "DELETE" });
+    setClient((prev) =>
+      prev ? { ...prev, projects: prev.projects.filter((p) => p.id !== projectId) } : prev
+    );
+  }
+
+  async function handleDeleteClient() {
+    if (!confirm("Delete this client? All their projects and tasks will be deleted too.")) return;
+
+    await fetch(`/api/clients/${id}`, { method: "DELETE" });
+    router.push("/clients");
+  }
+
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
@@ -149,12 +202,24 @@ export default function ClientDetailPage() {
         {/* Client Info */}
         <Card>
           <CardHeader>
-            <CardTitle>{client.name}</CardTitle>
-            <CardDescription className="space-y-0.5">
-              {client.company && <p>{client.company}</p>}
-              {client.email && <p>{client.email}</p>}
-              {client.phone && <p>{client.phone}</p>}
-            </CardDescription>
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <CardTitle>{client.name}</CardTitle>
+                <CardDescription className="space-y-0.5 mt-1">
+                  {client.company && <p>{client.company}</p>}
+                  {client.email && <p>{client.email}</p>}
+                  {client.phone && <p>{client.phone}</p>}
+                </CardDescription>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-destructive hover:text-destructive shrink-0"
+                onClick={handleDeleteClient}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            </div>
           </CardHeader>
         </Card>
 
@@ -172,9 +237,7 @@ export default function ClientDetailPage() {
                     <Input
                       id="proj-name"
                       value={form.name}
-                      onChange={(e) =>
-                        setForm((f) => ({ ...f, name: e.target.value }))
-                      }
+                      onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                       placeholder="Website redesign"
                       required
                     />
@@ -184,9 +247,7 @@ export default function ClientDetailPage() {
                     <Input
                       id="proj-desc"
                       value={form.description}
-                      onChange={(e) =>
-                        setForm((f) => ({ ...f, description: e.target.value }))
-                      }
+                      onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
                       placeholder="Short description..."
                     />
                   </div>
@@ -196,24 +257,16 @@ export default function ClientDetailPage() {
                       id="proj-deadline"
                       type="date"
                       value={form.deadline}
-                      onChange={(e) =>
-                        setForm((f) => ({ ...f, deadline: e.target.value }))
-                      }
+                      onChange={(e) => setForm((f) => ({ ...f, deadline: e.target.value }))}
                     />
                   </div>
                 </div>
                 <div className="flex gap-2 justify-end">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setShowForm(false)}
-                  >
+                  <Button type="button" variant="outline" onClick={() => setShowForm(false)}>
                     Cancel
                   </Button>
                   <Button type="submit" disabled={submitting}>
-                    {submitting && (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    )}
+                    {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                     Create Project
                   </Button>
                 </div>
@@ -235,33 +288,128 @@ export default function ClientDetailPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {client.projects.map((project) => (
-                <Card
-                  key={project.id}
-                  className="hover:bg-accent transition-colors cursor-pointer"
-                  onClick={() => router.push(`/projects/${project.id}`)}
-                >
-                  <CardHeader>
-                    <div className="flex items-start justify-between gap-2">
-                      <CardTitle className="text-base">{project.name}</CardTitle>
-                      <span
-                        className={`text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap ${STATUS_COLORS[project.status]}`}
+              {client.projects.map((project) =>
+                editingProjectId === project.id ? (
+                  <Card key={project.id}>
+                    <CardContent className="pt-4">
+                      <form
+                        onSubmit={(e) => handleEditProject(e, project.id)}
+                        className="space-y-3"
                       >
-                        {STATUS_LABELS[project.status]}
-                      </span>
-                    </div>
-                    {project.description && (
-                      <CardDescription>{project.description}</CardDescription>
-                    )}
-                    {project.deadline && (
-                      <CardDescription>
-                        Deadline:{" "}
-                        {new Date(project.deadline).toLocaleDateString()}
-                      </CardDescription>
-                    )}
-                  </CardHeader>
-                </Card>
-              ))}
+                        <div className="space-y-1">
+                          <Label>Name *</Label>
+                          <Input
+                            value={editForm.name}
+                            onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
+                            required
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label>Description</Label>
+                          <Input
+                            value={editForm.description}
+                            onChange={(e) =>
+                              setEditForm((f) => ({ ...f, description: e.target.value }))
+                            }
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <Label>Deadline</Label>
+                            <Input
+                              type="date"
+                              value={editForm.deadline}
+                              onChange={(e) =>
+                                setEditForm((f) => ({ ...f, deadline: e.target.value }))
+                              }
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label>Status</Label>
+                            <select
+                              value={editForm.status}
+                              onChange={(e) =>
+                                setEditForm((f) => ({
+                                  ...f,
+                                  status: e.target.value as ProjectStatus,
+                                }))
+                              }
+                              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+                            >
+                              <option value="PLANNED">Planned</option>
+                              <option value="IN_PROGRESS">In Progress</option>
+                              <option value="COMPLETED">Completed</option>
+                            </select>
+                          </div>
+                        </div>
+                        <div className="flex gap-2 justify-end">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setEditingProjectId(null)}
+                          >
+                            Cancel
+                          </Button>
+                          <Button type="submit" size="sm" disabled={editSubmitting}>
+                            {editSubmitting && (
+                              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                            )}
+                            Save
+                          </Button>
+                        </div>
+                      </form>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <Card
+                    key={project.id}
+                    className="hover:bg-accent transition-colors cursor-pointer"
+                    onClick={() => router.push(`/projects/${project.id}`)}
+                  >
+                    <CardHeader>
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <CardTitle className="text-base">{project.name}</CardTitle>
+                          {project.description && (
+                            <CardDescription>{project.description}</CardDescription>
+                          )}
+                          {project.deadline && (
+                            <CardDescription>
+                              Deadline: {new Date(project.deadline).toLocaleDateString()}
+                            </CardDescription>
+                          )}
+                        </div>
+                        <div className="flex flex-col items-end gap-1 shrink-0">
+                          <span
+                            className={`text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap ${STATUS_COLORS[project.status]}`}
+                          >
+                            {STATUS_LABELS[project.status]}
+                          </span>
+                          <div className="flex gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              onClick={(e) => startEditProject(project, e)}
+                            >
+                              <Pencil className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 text-destructive hover:text-destructive"
+                              onClick={(e) => handleDeleteProject(project.id, e)}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </CardHeader>
+                  </Card>
+                )
+              )}
             </div>
           )}
         </section>
