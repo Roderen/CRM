@@ -161,24 +161,24 @@ function ProjectCard({
               </CardDescription>
             </div>
             <div
-              className="flex gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+              className="flex gap-1 shrink-0"
               onClick={(e) => e.stopPropagation()}
             >
               <Button
-                variant="outline"
+                variant="ghost"
                 size="icon"
-                className="h-6 w-6"
+                className="h-7 w-7"
                 onClick={(e) => onEdit(project, e)}
               >
-                <Pencil className="h-3 w-3" />
+                <Pencil className="h-3.5 w-3.5" />
               </Button>
               <Button
-                variant="outline"
+                variant="ghost"
                 size="icon"
-                className="h-6 w-6 text-destructive hover:text-destructive hover:border-destructive"
+                className="h-7 w-7 text-destructive hover:text-destructive"
                 onClick={(e) => onDelete(project.id, e)}
               >
-                <Trash2 className="h-3 w-3" />
+                <Trash2 className="h-3.5 w-3.5" />
               </Button>
             </div>
           </div>
