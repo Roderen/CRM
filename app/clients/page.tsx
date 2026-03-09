@@ -184,7 +184,7 @@ export default function ClientsPage() {
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label htmlFor="dealAmount">Deal Amount (₽)</Label>
+                    <Label htmlFor="dealAmount">Deal Amount ($)</Label>
                     <Input
                       id="dealAmount"
                       type="number"
@@ -262,7 +262,7 @@ export default function ClientsPage() {
                           />
                         </div>
                         <div className="space-y-1 sm:col-span-2">
-                          <Label>Deal Amount (₽)</Label>
+                          <Label>Deal Amount ($)</Label>
                           <Input
                             type="number"
                             min="0"

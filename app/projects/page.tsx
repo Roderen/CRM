@@ -254,7 +254,7 @@ function EditCard({
             />
           </div>
           <div className="space-y-1">
-            <Label className="text-xs">Budget (₽)</Label>
+            <Label className="text-xs">Budget ($)</Label>
             <Input
               type="number"
               min="0"
