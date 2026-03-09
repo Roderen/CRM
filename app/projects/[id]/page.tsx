@@ -6,7 +6,9 @@ import dynamic from "next/dynamic";
 import { Loader2, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-const MDEditor = dynamic(() => import("@uiw/react-md-editor"), { ssr: false });
+const TiptapEditor = dynamic(() => import("@/components/tiptap-editor"), {
+  ssr: false,
+});
 
 interface Project {
   id: string;
@@ -65,12 +67,11 @@ export default function ProjectPage() {
     [id]
   );
 
-  function handleNotesChange(value?: string) {
-    const v = value ?? "";
-    setNotes(v);
+  function handleNotesChange(value: string) {
+    setNotes(value);
     setSaved(false);
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => saveNotes(v), 1500);
+    debounceRef.current = setTimeout(() => saveNotes(value), 1500);
   }
 
   if (loading) {
@@ -119,14 +120,8 @@ export default function ProjectPage() {
         </div>
       </header>
 
-      <main className="flex-1 p-6" data-color-mode="light">
-        <MDEditor
-          value={notes}
-          onChange={handleNotesChange}
-          height={600}
-          preview="live"
-          visibleDragbar={false}
-        />
+      <main className="flex-1 p-6">
+        <TiptapEditor value={notes} onChange={handleNotesChange} />
       </main>
     </div>
   );
