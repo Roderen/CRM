@@ -8,6 +8,7 @@ import {
   Pencil,
   Trash2,
   GripVertical,
+  Download,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,6 +20,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { downloadCSV } from "@/lib/export";
 import {
   DndContext,
   DragEndEvent,
@@ -356,6 +358,22 @@ export default function ProjectsPage() {
     setProjects((prev) => prev.filter((p) => p.id !== id));
   }
 
+  function handleExport() {
+    downloadCSV(
+      "projects.csv",
+      projects.map((p) => ({
+        Name: p.name,
+        Client: p.client.name,
+        Company: p.client.company ?? "",
+        Status: p.status,
+        Description: p.description ?? "",
+        Deadline: p.deadline ? new Date(p.deadline).toLocaleDateString() : "",
+        Budget: p.budget ?? "",
+        "Created At": new Date(p.createdAt).toLocaleDateString(),
+      }))
+    );
+  }
+
   const activeProject = projects.find((p) => p.id === activeId);
 
   return (
@@ -369,6 +387,12 @@ export default function ProjectsPage() {
         </button>
         <span className="text-muted-foreground">/</span>
         <h1 className="text-xl font-semibold">Projects</h1>
+        {projects.length > 0 && (
+          <Button variant="outline" size="sm" onClick={handleExport} className="ml-auto">
+            <Download className="h-4 w-4 mr-1" />
+            Export CSV
+          </Button>
+        )}
       </header>
 
       <main className="p-6">

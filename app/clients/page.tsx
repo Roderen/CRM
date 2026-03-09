@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Loader2, Building2, Pencil, Trash2 } from "lucide-react";
+import { Plus, Loader2, Building2, Pencil, Trash2, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { downloadCSV } from "@/lib/export";
 
 interface Client {
   id: string;
@@ -35,6 +36,20 @@ export default function ClientsPage() {
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({ name: "", email: "", phone: "", company: "", dealAmount: "" });
+
+  function handleExport() {
+    downloadCSV(
+      "clients.csv",
+      clients.map((c) => ({
+        Name: c.name,
+        Company: c.company ?? "",
+        Email: c.email ?? "",
+        Phone: c.phone ?? "",
+        "Deal Amount": c.dealAmount ?? "",
+        "Created At": new Date(c.createdAt).toLocaleDateString(),
+      }))
+    );
+  }
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ name: "", email: "", phone: "", company: "", dealAmount: "" });
@@ -129,10 +144,18 @@ export default function ClientsPage() {
           <span className="text-muted-foreground">/</span>
           <h1 className="text-xl font-semibold">Clients</h1>
         </div>
-        <Button onClick={() => setShowForm((v) => !v)} size="sm">
-          <Plus className="h-4 w-4 mr-1" />
-          Add Client
-        </Button>
+        <div className="flex gap-2">
+          {clients.length > 0 && (
+            <Button variant="outline" size="sm" onClick={handleExport}>
+              <Download className="h-4 w-4 mr-1" />
+              Export CSV
+            </Button>
+          )}
+          <Button onClick={() => setShowForm((v) => !v)} size="sm">
+            <Plus className="h-4 w-4 mr-1" />
+            Add Client
+          </Button>
+        </div>
       </header>
 
       <main className="p-6 max-w-4xl mx-auto space-y-6">
