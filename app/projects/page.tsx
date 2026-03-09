@@ -2,7 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, FolderKanban, Pencil, Trash2 } from "lucide-react";
+import {
+  Loader2,
+  FolderKanban,
+  Pencil,
+  Trash2,
+  GripVertical,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -13,6 +19,19 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  DndContext,
+  DragEndEvent,
+  DragOverlay,
+  DragStartEvent,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  useDroppable,
+  useDraggable,
+} from "@dnd-kit/core";
+import { CSS } from "@dnd-kit/utilities";
 
 type ProjectStatus = "PLANNED" | "IN_PROGRESS" | "COMPLETED";
 
@@ -30,31 +49,229 @@ interface Project {
   };
 }
 
-const STATUS_LABELS: Record<ProjectStatus, string> = {
-  PLANNED: "Planned",
-  IN_PROGRESS: "In Progress",
-  COMPLETED: "Completed",
-};
+const COLUMNS: { id: ProjectStatus; label: string; color: string; headerColor: string }[] = [
+  {
+    id: "PLANNED",
+    label: "Planned",
+    color: "bg-slate-50 border-slate-200",
+    headerColor: "bg-slate-200 text-slate-700",
+  },
+  {
+    id: "IN_PROGRESS",
+    label: "In Progress",
+    color: "bg-blue-50 border-blue-200",
+    headerColor: "bg-blue-200 text-blue-800",
+  },
+  {
+    id: "COMPLETED",
+    label: "Completed",
+    color: "bg-green-50 border-green-200",
+    headerColor: "bg-green-200 text-green-800",
+  },
+];
 
-const STATUS_COLORS: Record<ProjectStatus, string> = {
-  PLANNED: "bg-slate-100 text-slate-700",
-  IN_PROGRESS: "bg-blue-100 text-blue-700",
-  COMPLETED: "bg-green-100 text-green-700",
-};
+// ---- Droppable Column ----
+
+function KanbanColumn({
+  column,
+  children,
+  count,
+}: {
+  column: (typeof COLUMNS)[number];
+  children: React.ReactNode;
+  count: number;
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id: column.id });
+
+  return (
+    <div className="flex flex-col min-w-[280px] flex-1">
+      <div
+        className={`flex items-center justify-between px-3 py-2 rounded-t-lg ${column.headerColor}`}
+      >
+        <span className="font-semibold text-sm">{column.label}</span>
+        <span className="text-xs font-medium opacity-70">{count}</span>
+      </div>
+      <div
+        ref={setNodeRef}
+        className={`flex-1 min-h-[200px] border rounded-b-lg p-2 space-y-2 transition-colors ${column.color} ${
+          isOver ? "ring-2 ring-inset ring-primary/40" : ""
+        }`}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
+// ---- Draggable Card ----
+
+function ProjectCard({
+  project,
+  onEdit,
+  onDelete,
+  overlay = false,
+}: {
+  project: Project;
+  onEdit: (p: Project, e: React.MouseEvent) => void;
+  onDelete: (id: string, e: React.MouseEvent) => void;
+  overlay?: boolean;
+}) {
+  const router = useRouter();
+  const { attributes, listeners, setNodeRef, transform, isDragging } =
+    useDraggable({ id: project.id });
+
+  const style = {
+    transform: CSS.Translate.toString(transform),
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={overlay ? undefined : style}
+      className={`group ${isDragging ? "opacity-30" : ""}`}
+    >
+      <Card
+        className={`cursor-pointer select-none transition-shadow ${
+          overlay ? "shadow-xl rotate-1" : "hover:shadow-md"
+        }`}
+        onClick={() => !overlay && router.push(`/projects/${project.id}`)}
+      >
+        <CardHeader className="p-3">
+          <div className="flex items-start gap-2">
+            <button
+              {...listeners}
+              {...attributes}
+              onClick={(e) => e.stopPropagation()}
+              className="mt-0.5 shrink-0 cursor-grab active:cursor-grabbing text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+            >
+              <GripVertical className="h-4 w-4" />
+            </button>
+            <div className="min-w-0 flex-1">
+              <CardTitle className="text-sm leading-snug">{project.name}</CardTitle>
+              <CardDescription className="mt-0.5 text-xs space-y-0.5">
+                <p className="font-medium text-foreground/60">
+                  {project.client.company
+                    ? `${project.client.name} · ${project.client.company}`
+                    : project.client.name}
+                </p>
+                {project.description && <p>{project.description}</p>}
+                {project.deadline && (
+                  <p>⏱ {new Date(project.deadline).toLocaleDateString()}</p>
+                )}
+              </CardDescription>
+            </div>
+            <div
+              className="flex gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6"
+                onClick={(e) => onEdit(project, e)}
+              >
+                <Pencil className="h-3 w-3" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 text-destructive hover:text-destructive"
+                onClick={(e) => onDelete(project.id, e)}
+              >
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+      </Card>
+    </div>
+  );
+}
+
+// ---- Edit Card ----
+
+function EditCard({
+  project,
+  onSave,
+  onCancel,
+}: {
+  project: Project;
+  onSave: (id: string, data: { name: string; description: string; deadline: string; status: ProjectStatus }) => Promise<void>;
+  onCancel: () => void;
+}) {
+  const [form, setForm] = useState({
+    name: project.name,
+    description: project.description ?? "",
+    deadline: project.deadline ? project.deadline.slice(0, 10) : "",
+    status: project.status,
+  });
+  const [submitting, setSubmitting] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setSubmitting(true);
+    await onSave(project.id, form);
+    setSubmitting(false);
+  }
+
+  return (
+    <Card>
+      <CardContent className="p-3">
+        <form onSubmit={handleSubmit} className="space-y-2">
+          <div className="space-y-1">
+            <Label className="text-xs">Name *</Label>
+            <Input
+              value={form.name}
+              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+              className="h-7 text-sm"
+              required
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Description</Label>
+            <Input
+              value={form.description}
+              onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+              className="h-7 text-sm"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Deadline</Label>
+            <Input
+              type="date"
+              value={form.deadline}
+              onChange={(e) => setForm((f) => ({ ...f, deadline: e.target.value }))}
+              className="h-7 text-sm"
+            />
+          </div>
+          <div className="flex gap-2 justify-end pt-1">
+            <Button type="button" variant="outline" size="sm" className="h-6 text-xs" onClick={onCancel}>
+              Cancel
+            </Button>
+            <Button type="submit" size="sm" className="h-6 text-xs" disabled={submitting}>
+              {submitting && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
+              Save
+            </Button>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ---- Main Page ----
 
 export default function ProjectsPage() {
   const router = useRouter();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
-
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({
-    name: "",
-    description: "",
-    deadline: "",
-    status: "PLANNED" as ProjectStatus,
-  });
-  const [editSubmitting, setEditSubmitting] = useState(false);
+  const [activeId, setActiveId] = useState<string | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } })
+  );
 
   useEffect(() => {
     fetch("/api/projects")
@@ -63,47 +280,62 @@ export default function ProjectsPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  function startEdit(project: Project, e: React.MouseEvent) {
-    e.stopPropagation();
-    setEditingId(project.id);
-    setEditForm({
-      name: project.name,
-      description: project.description ?? "",
-      deadline: project.deadline ? project.deadline.slice(0, 10) : "",
-      status: project.status,
-    });
+  function handleDragStart(event: DragStartEvent) {
+    setActiveId(event.active.id as string);
   }
 
-  async function handleEditSubmit(e: React.FormEvent, id: string) {
-    e.preventDefault();
-    if (!editForm.name.trim()) return;
+  async function handleDragEnd(event: DragEndEvent) {
+    setActiveId(null);
+    const { active, over } = event;
+    if (!over) return;
 
-    setEditSubmitting(true);
-    try {
-      const res = await fetch(`/api/projects/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(editForm),
-      });
-      if (res.ok) {
-        const updated = await res.json();
-        setProjects((prev) =>
-          prev.map((p) => (p.id === id ? { ...p, ...updated } : p))
-        );
-        setEditingId(null);
-      }
-    } finally {
-      setEditSubmitting(false);
+    const newStatus = over.id as ProjectStatus;
+    const project = projects.find((p) => p.id === active.id);
+    if (!project || project.status === newStatus) return;
+
+    // Optimistic update
+    setProjects((prev) =>
+      prev.map((p) => (p.id === active.id ? { ...p, status: newStatus } : p))
+    );
+
+    const res = await fetch(`/api/projects/${active.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...project, status: newStatus }),
+    });
+
+    if (!res.ok) {
+      // Revert on error
+      setProjects((prev) =>
+        prev.map((p) => (p.id === active.id ? { ...p, status: project.status } : p))
+      );
+    }
+  }
+
+  async function handleSave(
+    id: string,
+    data: { name: string; description: string; deadline: string; status: ProjectStatus }
+  ) {
+    const res = await fetch(`/api/projects/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    if (res.ok) {
+      const updated = await res.json();
+      setProjects((prev) => prev.map((p) => (p.id === id ? { ...p, ...updated } : p)));
+      setEditingId(null);
     }
   }
 
   async function handleDelete(id: string, e: React.MouseEvent) {
     e.stopPropagation();
     if (!confirm("Delete this project? All tasks will be deleted too.")) return;
-
     await fetch(`/api/projects/${id}`, { method: "DELETE" });
     setProjects((prev) => prev.filter((p) => p.id !== id));
   }
+
+  const activeProject = projects.find((p) => p.id === activeId);
 
   return (
     <div className="min-h-screen bg-background">
@@ -118,7 +350,7 @@ export default function ProjectsPage() {
         <h1 className="text-xl font-semibold">Projects</h1>
       </header>
 
-      <main className="p-6 max-w-4xl mx-auto">
+      <main className="p-6">
         {loading ? (
           <div className="flex justify-center py-12">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -129,138 +361,52 @@ export default function ProjectsPage() {
             <p>No projects yet. Create one from a client page.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {projects.map((project) =>
-              editingId === project.id ? (
-                <Card key={project.id}>
-                  <CardContent className="pt-4">
-                    <form
-                      onSubmit={(e) => handleEditSubmit(e, project.id)}
-                      className="space-y-3"
-                    >
-                      <div className="space-y-1">
-                        <Label>Name *</Label>
-                        <Input
-                          value={editForm.name}
-                          onChange={(e) =>
-                            setEditForm((f) => ({ ...f, name: e.target.value }))
-                          }
-                          required
+          <DndContext
+            sensors={sensors}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+          >
+            <div className="flex gap-4 items-start overflow-x-auto pb-4">
+              {COLUMNS.map((col) => {
+                const colProjects = projects.filter((p) => p.status === col.id);
+                return (
+                  <KanbanColumn key={col.id} column={col} count={colProjects.length}>
+                    {colProjects.map((project) =>
+                      editingId === project.id ? (
+                        <EditCard
+                          key={project.id}
+                          project={project}
+                          onSave={handleSave}
+                          onCancel={() => setEditingId(null)}
                         />
-                      </div>
-                      <div className="space-y-1">
-                        <Label>Description</Label>
-                        <Input
-                          value={editForm.description}
-                          onChange={(e) =>
-                            setEditForm((f) => ({ ...f, description: e.target.value }))
-                          }
+                      ) : (
+                        <ProjectCard
+                          key={project.id}
+                          project={project}
+                          onEdit={(p, e) => {
+                            e.stopPropagation();
+                            setEditingId(p.id);
+                          }}
+                          onDelete={handleDelete}
                         />
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1">
-                          <Label>Deadline</Label>
-                          <Input
-                            type="date"
-                            value={editForm.deadline}
-                            onChange={(e) =>
-                              setEditForm((f) => ({ ...f, deadline: e.target.value }))
-                            }
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <Label>Status</Label>
-                          <select
-                            value={editForm.status}
-                            onChange={(e) =>
-                              setEditForm((f) => ({
-                                ...f,
-                                status: e.target.value as ProjectStatus,
-                              }))
-                            }
-                            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
-                          >
-                            <option value="PLANNED">Planned</option>
-                            <option value="IN_PROGRESS">In Progress</option>
-                            <option value="COMPLETED">Completed</option>
-                          </select>
-                        </div>
-                      </div>
-                      <div className="flex gap-2 justify-end">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setEditingId(null)}
-                        >
-                          Cancel
-                        </Button>
-                        <Button type="submit" size="sm" disabled={editSubmitting}>
-                          {editSubmitting && (
-                            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                          )}
-                          Save
-                        </Button>
-                      </div>
-                    </form>
-                  </CardContent>
-                </Card>
-              ) : (
-                <Card
-                  key={project.id}
-                  className="hover:bg-accent transition-colors cursor-pointer"
-                  onClick={() => router.push(`/projects/${project.id}`)}
-                >
-                  <CardHeader>
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <CardTitle className="text-base">{project.name}</CardTitle>
-                        <CardDescription className="space-y-0.5 mt-1">
-                          <p>
-                            {project.client.company
-                              ? `${project.client.name} · ${project.client.company}`
-                              : project.client.name}
-                          </p>
-                          {project.description && <p>{project.description}</p>}
-                          {project.deadline && (
-                            <p>
-                              Deadline:{" "}
-                              {new Date(project.deadline).toLocaleDateString()}
-                            </p>
-                          )}
-                        </CardDescription>
-                      </div>
-                      <div className="flex flex-col items-end gap-1 shrink-0">
-                        <span
-                          className={`text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap ${STATUS_COLORS[project.status]}`}
-                        >
-                          {STATUS_LABELS[project.status]}
-                        </span>
-                        <div className="flex gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6"
-                            onClick={(e) => startEdit(project, e)}
-                          >
-                            <Pencil className="h-3 w-3" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 text-destructive hover:text-destructive"
-                            onClick={(e) => handleDelete(project.id, e)}
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  </CardHeader>
-                </Card>
-              )
-            )}
-          </div>
+                      )
+                    )}
+                  </KanbanColumn>
+                );
+              })}
+            </div>
+
+            <DragOverlay>
+              {activeProject && (
+                <ProjectCard
+                  project={activeProject}
+                  onEdit={() => {}}
+                  onDelete={() => {}}
+                  overlay
+                />
+              )}
+            </DragOverlay>
+          </DndContext>
         )}
       </main>
     </div>
