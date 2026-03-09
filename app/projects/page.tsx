@@ -394,17 +394,17 @@ export default function ProjectsPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b px-6 py-4 flex items-center gap-3">
+      <header className="border-b px-6 py-4 flex items-center gap-3 overflow-x-auto">
         <button
           onClick={() => router.push("/dashboard")}
-          className="text-muted-foreground hover:text-foreground transition-colors text-sm"
+          className="text-muted-foreground hover:text-foreground transition-colors text-sm whitespace-nowrap shrink-0"
         >
           ← Dashboard
         </button>
-        <span className="text-muted-foreground">/</span>
-        <h1 className="text-xl font-semibold">Projects</h1>
+        <span className="text-muted-foreground shrink-0">/</span>
+        <h1 className="text-xl font-semibold whitespace-nowrap shrink-0">Projects</h1>
         {projects.length > 0 && (
-          <Button variant="outline" size="sm" onClick={handleExport} className="ml-auto">
+          <Button variant="outline" size="sm" onClick={handleExport} className="ml-auto shrink-0">
             <Download className="h-4 w-4 mr-1" />
             Export CSV
           </Button>

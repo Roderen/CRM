@@ -141,18 +141,18 @@ export default function ClientsPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
+      <header className="border-b px-6 py-4 flex items-center justify-between gap-4 overflow-x-auto">
+        <div className="flex items-center gap-3 shrink-0">
           <button
             onClick={() => router.push("/dashboard")}
-            className="text-muted-foreground hover:text-foreground transition-colors text-sm"
+            className="text-muted-foreground hover:text-foreground transition-colors text-sm whitespace-nowrap"
           >
             ← Dashboard
           </button>
           <span className="text-muted-foreground">/</span>
-          <h1 className="text-xl font-semibold">Clients</h1>
+          <h1 className="text-xl font-semibold whitespace-nowrap">Clients</h1>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 shrink-0">
           {clients.length > 0 && (
             <Button variant="outline" size="sm" onClick={handleExport}>
               <Download className="h-4 w-4 mr-1" />
