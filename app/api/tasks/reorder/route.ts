@@ -20,12 +20,11 @@ export async function POST(request: Request) {
   }
 
   // Verify all tasks belong to the current user, then batch update
-  // Note: position field requires `prisma db push` to be applied first
   await prisma.$transaction(
-    tasks.map(({ id, status }) =>
+    tasks.map(({ id, status, position }) =>
       prisma.task.updateMany({
         where: { id, project: { client: { userId } } },
-        data: { status },
+        data: { status, position },
       })
     )
   );
