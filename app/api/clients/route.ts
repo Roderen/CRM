@@ -9,12 +9,16 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const clients = await prisma.client.findMany({
-    where: { userId },
-    orderBy: { createdAt: "desc" },
-  });
-
-  return NextResponse.json(clients);
+  try {
+    const clients = await prisma.client.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+    });
+    return NextResponse.json(clients);
+  } catch (err) {
+    console.error("GET /api/clients error:", err);
+    return NextResponse.json({ error: "Database error" }, { status: 500 });
+  }
 }
 
 export async function POST(request: Request) {

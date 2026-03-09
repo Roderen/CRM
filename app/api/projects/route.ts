@@ -9,13 +9,17 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const projects = await prisma.project.findMany({
-    where: { client: { userId } },
-    include: { client: { select: { id: true, name: true, company: true } } },
-    orderBy: { createdAt: "desc" },
-  });
-
-  return NextResponse.json(projects);
+  try {
+    const projects = await prisma.project.findMany({
+      where: { client: { userId } },
+      include: { client: { select: { id: true, name: true, company: true } } },
+      orderBy: { createdAt: "desc" },
+    });
+    return NextResponse.json(projects);
+  } catch (err) {
+    console.error("GET /api/projects error:", err);
+    return NextResponse.json({ error: "Database error" }, { status: 500 });
+  }
 }
 
 export async function POST(request: Request) {
