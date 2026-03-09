@@ -227,8 +227,8 @@ export default function ProjectsPage() {
             <p>No projects yet. Create one from a client page.</p>
           </div>
         ) : (
-          <div className="rounded-lg border overflow-hidden">
-            <table className="w-full text-sm">
+          <div className="rounded-lg border overflow-x-auto">
+            <table className="w-full min-w-[640px] text-sm">
               <thead className="bg-muted/50 border-b">
                 <tr>
                   <th className={thClass}>
