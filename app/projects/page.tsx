@@ -7,37 +7,21 @@ import {
   FolderKanban,
   Pencil,
   Trash2,
-  GripVertical,
   Download,
+  ChevronUp,
+  ChevronDown,
+  ChevronsUpDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { downloadCSV } from "@/lib/export";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { fmtCurrency } from "@/lib/format";
-import {
-  DndContext,
-  DragEndEvent,
-  DragOverlay,
-  DragStartEvent,
-  PointerSensor,
-  TouchSensor,
-  useSensor,
-  useSensors,
-  useDroppable,
-  useDraggable,
-} from "@dnd-kit/core";
-import { CSS } from "@dnd-kit/utilities";
 
 type ProjectStatus = "PLANNED" | "IN_PROGRESS" | "COMPLETED";
+type SortField = "name" | "client" | "status" | "deadline" | "budget";
+type SortDir = "asc" | "desc";
 
 interface Project {
   id: string;
@@ -54,233 +38,27 @@ interface Project {
   };
 }
 
-const COLUMNS: { id: ProjectStatus; label: string; color: string; headerColor: string }[] = [
-  {
-    id: "PLANNED",
-    label: "Planned",
-    color: "bg-slate-50 border-slate-200",
-    headerColor: "bg-slate-200 text-slate-700",
-  },
-  {
-    id: "IN_PROGRESS",
-    label: "In Progress",
-    color: "bg-blue-50 border-blue-200",
-    headerColor: "bg-blue-200 text-blue-800",
-  },
-  {
-    id: "COMPLETED",
-    label: "Completed",
-    color: "bg-green-50 border-green-200",
-    headerColor: "bg-green-200 text-green-800",
-  },
-];
+const STATUS_META: Record<ProjectStatus, { label: string; className: string }> = {
+  PLANNED: { label: "Planned", className: "bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200" },
+  IN_PROGRESS: { label: "In Progress", className: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200" },
+  COMPLETED: { label: "Completed", className: "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200" },
+};
 
-// ---- Droppable Column ----
-
-function KanbanColumn({
-  column,
-  children,
-  count,
-}: {
-  column: (typeof COLUMNS)[number];
-  children: React.ReactNode;
-  count: number;
-}) {
-  const { setNodeRef, isOver } = useDroppable({ id: column.id });
-
+function StatusBadge({ status }: { status: ProjectStatus }) {
+  const { label, className } = STATUS_META[status];
   return (
-    <div className="flex flex-col min-w-[280px] flex-1">
-      <div
-        className={`flex items-center justify-between px-3 py-2 rounded-t-lg ${column.headerColor}`}
-      >
-        <span className="font-semibold text-sm">{column.label}</span>
-        <span className="text-xs font-medium opacity-70">{count}</span>
-      </div>
-      <div
-        ref={setNodeRef}
-        className={`flex-1 min-h-[200px] border rounded-b-lg p-2 space-y-2 transition-colors ${column.color} ${
-          isOver ? "ring-2 ring-inset ring-primary/40" : ""
-        }`}
-      >
-        {children}
-      </div>
-    </div>
+    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${className}`}>
+      {label}
+    </span>
   );
 }
 
-// ---- Draggable Card ----
-
-function ProjectCard({
-  project,
-  onEdit,
-  onDelete,
-  overlay = false,
-}: {
-  project: Project;
-  onEdit: (p: Project, e: React.MouseEvent) => void;
-  onDelete: (id: string, e: React.MouseEvent) => void;
-  overlay?: boolean;
-}) {
-  const router = useRouter();
-  const { attributes, listeners, setNodeRef, transform, isDragging } =
-    useDraggable({ id: project.id });
-
-  const style = {
-    transform: CSS.Translate.toString(transform),
-  };
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={overlay ? undefined : style}
-      className={`group ${isDragging ? "opacity-30" : ""}`}
-    >
-      <Card
-        className={`cursor-pointer select-none transition-shadow ${
-          overlay ? "shadow-xl rotate-1" : "hover:shadow-md"
-        }`}
-        onClick={() => !overlay && router.push(`/projects/${project.id}`)}
-      >
-        <CardHeader className="p-3">
-          <div className="flex items-start gap-2">
-            <button
-              {...listeners}
-              {...attributes}
-              onClick={(e) => e.stopPropagation()}
-              className="mt-0.5 shrink-0 cursor-grab active:cursor-grabbing text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"
-            >
-              <GripVertical className="h-4 w-4" />
-            </button>
-            <div className="min-w-0 flex-1">
-              <CardTitle className="text-sm leading-snug">{project.name}</CardTitle>
-              <CardDescription className="mt-0.5 text-xs space-y-0.5">
-                <p className="font-medium text-foreground/60">
-                  {project.client.company
-                    ? `${project.client.name} · ${project.client.company}`
-                    : project.client.name}
-                </p>
-                {project.description && <p>{project.description}</p>}
-                {project.deadline && (
-                  <p>⏱ {new Date(project.deadline).toLocaleDateString()}</p>
-                )}
-                {project.budget != null && (
-                  <p className="text-green-600 font-medium">{fmtCurrency(project.budget)}</p>
-                )}
-              </CardDescription>
-            </div>
-            <div
-              className="flex gap-1 shrink-0"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7"
-                onClick={(e) => onEdit(project, e)}
-              >
-                <Pencil className="h-3.5 w-3.5" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7 text-destructive hover:text-destructive"
-                onClick={(e) => onDelete(project.id, e)}
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-      </Card>
-    </div>
-  );
+function SortIcon({ field, sortField, sortDir }: { field: SortField; sortField: SortField; sortDir: SortDir }) {
+  if (field !== sortField) return <ChevronsUpDown className="h-3.5 w-3.5 opacity-40" />;
+  return sortDir === "asc"
+    ? <ChevronUp className="h-3.5 w-3.5" />
+    : <ChevronDown className="h-3.5 w-3.5" />;
 }
-
-// ---- Edit Card ----
-
-function EditCard({
-  project,
-  onSave,
-  onCancel,
-}: {
-  project: Project;
-  onSave: (id: string, data: { name: string; description: string; deadline: string; status: ProjectStatus; budget: string }) => Promise<void>;
-  onCancel: () => void;
-}) {
-  const [form, setForm] = useState({
-    name: project.name,
-    description: project.description ?? "",
-    deadline: project.deadline ? project.deadline.slice(0, 10) : "",
-    status: project.status,
-    budget: project.budget != null ? String(project.budget) : "",
-  });
-  const [submitting, setSubmitting] = useState(false);
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setSubmitting(true);
-    await onSave(project.id, form);
-    setSubmitting(false);
-  }
-
-  return (
-    <Card>
-      <CardContent className="p-3">
-        <form onSubmit={handleSubmit} className="space-y-2">
-          <div className="space-y-1">
-            <Label className="text-xs">Name *</Label>
-            <Input
-              value={form.name}
-              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-              className="h-7 text-sm"
-              required
-            />
-          </div>
-          <div className="space-y-1">
-            <Label className="text-xs">Description</Label>
-            <Input
-              value={form.description}
-              onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-              className="h-7 text-sm"
-            />
-          </div>
-          <div className="space-y-1">
-            <Label className="text-xs">Deadline</Label>
-            <Input
-              type="date"
-              value={form.deadline}
-              onChange={(e) => setForm((f) => ({ ...f, deadline: e.target.value }))}
-              className="h-7 text-sm"
-            />
-          </div>
-          <div className="space-y-1">
-            <Label className="text-xs">Budget ($)</Label>
-            <Input
-              type="number"
-              min="0"
-              step="any"
-              value={form.budget}
-              onChange={(e) => setForm((f) => ({ ...f, budget: e.target.value }))}
-              className="h-7 text-sm"
-              placeholder="0"
-            />
-          </div>
-          <div className="flex gap-2 justify-end pt-1">
-            <Button type="button" variant="outline" size="sm" className="h-6 text-xs" onClick={onCancel}>
-              Cancel
-            </Button>
-            <Button type="submit" size="sm" className="h-6 text-xs" disabled={submitting}>
-              {submitting && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
-              Save
-            </Button>
-          </div>
-        </form>
-      </CardContent>
-    </Card>
-  );
-}
-
-// ---- Main Page ----
 
 export default function ProjectsPage() {
   const router = useRouter();
@@ -288,12 +66,16 @@ export default function ProjectsPage() {
   const [loading, setLoading] = useState(true);
   const [dbError, setDbError] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [activeId, setActiveId] = useState<string | null>(null);
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } })
-  );
+  const [editForm, setEditForm] = useState<{
+    name: string;
+    description: string;
+    deadline: string;
+    status: ProjectStatus;
+    budget: string;
+  } | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [sortField, setSortField] = useState<SortField>("name");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
 
   async function fetchProjects() {
     setLoading(true);
@@ -317,56 +99,44 @@ export default function ProjectsPage() {
     fetchProjects();
   }, []);
 
-  function handleDragStart(event: DragStartEvent) {
-    setActiveId(event.active.id as string);
-  }
-
-  async function handleDragEnd(event: DragEndEvent) {
-    setActiveId(null);
-    const { active, over } = event;
-    if (!over) return;
-
-    const newStatus = over.id as ProjectStatus;
-    const project = projects.find((p) => p.id === active.id);
-    if (!project || project.status === newStatus) return;
-
-    // Optimistic update
-    setProjects((prev) =>
-      prev.map((p) => (p.id === active.id ? { ...p, status: newStatus } : p))
-    );
-
-    const res = await fetch(`/api/projects/${active.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...project, status: newStatus }),
-    });
-
-    if (!res.ok) {
-      // Revert on error
-      setProjects((prev) =>
-        prev.map((p) => (p.id === active.id ? { ...p, status: project.status } : p))
-      );
+  function handleSort(field: SortField) {
+    if (sortField === field) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortField(field);
+      setSortDir("asc");
     }
   }
 
-  async function handleSave(
-    id: string,
-    data: { name: string; description: string; deadline: string; status: ProjectStatus; budget: string }
-  ) {
+  function startEdit(project: Project) {
+    setEditingId(project.id);
+    setEditForm({
+      name: project.name,
+      description: project.description ?? "",
+      deadline: project.deadline ? project.deadline.slice(0, 10) : "",
+      status: project.status,
+      budget: project.budget != null ? String(project.budget) : "",
+    });
+  }
+
+  async function handleSave(id: string) {
+    if (!editForm) return;
+    setSubmitting(true);
     const res = await fetch(`/api/projects/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
+      body: JSON.stringify(editForm),
     });
     if (res.ok) {
       const updated = await res.json();
       setProjects((prev) => prev.map((p) => (p.id === id ? { ...p, ...updated } : p)));
       setEditingId(null);
+      setEditForm(null);
     }
+    setSubmitting(false);
   }
 
-  async function handleDelete(id: string, e: React.MouseEvent) {
-    e.stopPropagation();
+  async function handleDelete(id: string) {
     if (!confirm("Delete this project? All tasks will be deleted too.")) return;
     await fetch(`/api/projects/${id}`, { method: "DELETE" });
     setProjects((prev) => prev.filter((p) => p.id !== id));
@@ -388,7 +158,21 @@ export default function ProjectsPage() {
     );
   }
 
-  const activeProject = projects.find((p) => p.id === activeId);
+  const sorted = [...projects].sort((a, b) => {
+    let av: string | number = "";
+    let bv: string | number = "";
+    if (sortField === "name") { av = a.name; bv = b.name; }
+    else if (sortField === "client") { av = a.client.name; bv = b.client.name; }
+    else if (sortField === "status") { av = a.status; bv = b.status; }
+    else if (sortField === "deadline") { av = a.deadline ?? ""; bv = b.deadline ?? ""; }
+    else if (sortField === "budget") { av = a.budget ?? -1; bv = b.budget ?? -1; }
+    if (av < bv) return sortDir === "asc" ? -1 : 1;
+    if (av > bv) return sortDir === "asc" ? 1 : -1;
+    return 0;
+  });
+
+  const thClass = "px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide select-none";
+  const thBtn = "flex items-center gap-1 hover:text-foreground transition-colors cursor-pointer";
 
   return (
     <div className="min-h-screen bg-background">
@@ -443,52 +227,179 @@ export default function ProjectsPage() {
             <p>No projects yet. Create one from a client page.</p>
           </div>
         ) : (
-          <DndContext
-            sensors={sensors}
-            onDragStart={handleDragStart}
-            onDragEnd={handleDragEnd}
-          >
-            <div className="flex gap-4 items-start overflow-x-auto pb-4">
-              {COLUMNS.map((col) => {
-                const colProjects = projects.filter((p) => p.status === col.id);
-                return (
-                  <KanbanColumn key={col.id} column={col} count={colProjects.length}>
-                    {colProjects.map((project) =>
-                      editingId === project.id ? (
-                        <EditCard
-                          key={project.id}
-                          project={project}
-                          onSave={handleSave}
-                          onCancel={() => setEditingId(null)}
+          <div className="rounded-lg border overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/50 border-b">
+                <tr>
+                  <th className={thClass}>
+                    <button className={thBtn} onClick={() => handleSort("name")}>
+                      Name <SortIcon field="name" sortField={sortField} sortDir={sortDir} />
+                    </button>
+                  </th>
+                  <th className={thClass}>
+                    <button className={thBtn} onClick={() => handleSort("client")}>
+                      Client <SortIcon field="client" sortField={sortField} sortDir={sortDir} />
+                    </button>
+                  </th>
+                  <th className={thClass}>
+                    <button className={thBtn} onClick={() => handleSort("status")}>
+                      Status <SortIcon field="status" sortField={sortField} sortDir={sortDir} />
+                    </button>
+                  </th>
+                  <th className={thClass}>
+                    <button className={thBtn} onClick={() => handleSort("deadline")}>
+                      Deadline <SortIcon field="deadline" sortField={sortField} sortDir={sortDir} />
+                    </button>
+                  </th>
+                  <th className={thClass}>
+                    <button className={thBtn} onClick={() => handleSort("budget")}>
+                      Budget <SortIcon field="budget" sortField={sortField} sortDir={sortDir} />
+                    </button>
+                  </th>
+                  <th className={thClass}></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {sorted.map((project) =>
+                  editingId === project.id && editForm ? (
+                    <tr key={project.id} className="bg-muted/30">
+                      <td className="px-4 py-2">
+                        <div className="space-y-1">
+                          <Label className="text-xs">Name *</Label>
+                          <Input
+                            value={editForm.name}
+                            onChange={(e) => setEditForm((f) => f && { ...f, name: e.target.value })}
+                            className="h-7 text-sm"
+                            required
+                          />
+                          <Label className="text-xs">Description</Label>
+                          <Input
+                            value={editForm.description}
+                            onChange={(e) => setEditForm((f) => f && { ...f, description: e.target.value })}
+                            className="h-7 text-sm"
+                            placeholder="optional"
+                          />
+                        </div>
+                      </td>
+                      <td className="px-4 py-2 text-muted-foreground">
+                        {project.client.company
+                          ? `${project.client.name} · ${project.client.company}`
+                          : project.client.name}
+                      </td>
+                      <td className="px-4 py-2">
+                        <select
+                          value={editForm.status}
+                          onChange={(e) => setEditForm((f) => f && { ...f, status: e.target.value as ProjectStatus })}
+                          className="h-7 text-sm rounded-md border border-input bg-background px-2"
+                        >
+                          <option value="PLANNED">Planned</option>
+                          <option value="IN_PROGRESS">In Progress</option>
+                          <option value="COMPLETED">Completed</option>
+                        </select>
+                      </td>
+                      <td className="px-4 py-2">
+                        <Input
+                          type="date"
+                          value={editForm.deadline}
+                          onChange={(e) => setEditForm((f) => f && { ...f, deadline: e.target.value })}
+                          className="h-7 text-sm w-36"
                         />
-                      ) : (
-                        <ProjectCard
-                          key={project.id}
-                          project={project}
-                          onEdit={(p, e) => {
-                            e.stopPropagation();
-                            setEditingId(p.id);
-                          }}
-                          onDelete={handleDelete}
+                      </td>
+                      <td className="px-4 py-2">
+                        <Input
+                          type="number"
+                          min="0"
+                          step="any"
+                          value={editForm.budget}
+                          onChange={(e) => setEditForm((f) => f && { ...f, budget: e.target.value })}
+                          className="h-7 text-sm w-28"
+                          placeholder="0"
                         />
-                      )
-                    )}
-                  </KanbanColumn>
-                );
-              })}
-            </div>
-
-            <DragOverlay>
-              {activeProject && (
-                <ProjectCard
-                  project={activeProject}
-                  onEdit={() => {}}
-                  onDelete={() => {}}
-                  overlay
-                />
-              )}
-            </DragOverlay>
-          </DndContext>
+                      </td>
+                      <td className="px-4 py-2">
+                        <div className="flex items-center gap-2 justify-end">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 text-xs"
+                            onClick={() => { setEditingId(null); setEditForm(null); }}
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            size="sm"
+                            className="h-7 text-xs"
+                            disabled={submitting}
+                            onClick={() => handleSave(project.id)}
+                          >
+                            {submitting && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
+                            Save
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    <tr
+                      key={project.id}
+                      className="hover:bg-muted/30 cursor-pointer transition-colors"
+                      onClick={() => router.push(`/projects/${project.id}`)}
+                    >
+                      <td className="px-4 py-3 font-medium">
+                        <div>{project.name}</div>
+                        {project.description && (
+                          <div className="text-xs text-muted-foreground mt-0.5 truncate max-w-[240px]">
+                            {project.description}
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        <div>{project.client.name}</div>
+                        {project.client.company && (
+                          <div className="text-xs opacity-70">{project.client.company}</div>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <StatusBadge status={project.status} />
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {project.deadline
+                          ? new Date(project.deadline).toLocaleDateString()
+                          : <span className="opacity-40">—</span>}
+                      </td>
+                      <td className="px-4 py-3 text-green-600 dark:text-green-400 font-medium">
+                        {project.budget != null
+                          ? fmtCurrency(project.budget)
+                          : <span className="text-muted-foreground opacity-40">—</span>}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div
+                          className="flex items-center gap-1 justify-end"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() => startEdit(project)}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-destructive hover:text-destructive"
+                            onClick={() => handleDelete(project.id)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                )}
+              </tbody>
+            </table>
+          </div>
         )}
       </main>
     </div>
