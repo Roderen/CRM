@@ -39,21 +39,21 @@ interface Stats {
 
 function formatDeadline(dateStr: string) {
   const d = new Date(dateStr);
-  return d.toLocaleDateString("ru-RU", { day: "numeric", month: "short" });
+  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 }
 
 function daysLeft(dateStr: string) {
   const diff = new Date(dateStr).getTime() - Date.now();
   const days = Math.ceil(diff / 86400000);
-  if (days === 0) return "сегодня";
-  if (days === 1) return "завтра";
-  return `через ${days} дн.`;
+  if (days === 0) return "today";
+  if (days === 1) return "tomorrow";
+  return `in ${days} days`;
 }
 
 function daysOverdue(dateStr: string) {
   const diff = Date.now() - new Date(dateStr).getTime();
   const days = Math.ceil(diff / 86400000);
-  return days === 1 ? "1 день" : `${days} дн.`;
+  return days === 1 ? "1 day" : `${days} days`;
 }
 
 export default function DashboardPage() {
@@ -81,19 +81,19 @@ export default function DashboardPage() {
       <main className="p-6 max-w-5xl mx-auto space-y-8">
         {/* Counts */}
         <section>
-          <h2 className="text-lg font-semibold mb-4">Обзор</h2>
+          <h2 className="text-lg font-semibold mb-4">Overview</h2>
           {loading ? (
             <div className="flex items-center gap-2 text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
-              <span className="text-sm">Загрузка…</span>
+              <span className="text-sm">Loading…</span>
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
-              <StatCard label="Клиенты" value={stats?.clientsCount ?? 0} color="text-blue-500" />
-              <StatCard label="Запланировано" value={stats?.projects.planned ?? 0} color="text-slate-500" sub="проектов" />
-              <StatCard label="В работе" value={stats?.projects.inProgress ?? 0} color="text-amber-500" sub="проектов" />
-              <StatCard label="Завершено" value={stats?.projects.completed ?? 0} color="text-green-500" sub="проектов" />
-              <StatCard label="Задачи в работе" value={stats?.tasksInProgress ?? 0} color="text-purple-500" sub="задач" />
+              <StatCard label="Clients" value={stats?.clientsCount ?? 0} color="text-blue-500" />
+              <StatCard label="Planned" value={stats?.projects.planned ?? 0} color="text-slate-500" sub="projects" />
+              <StatCard label="In Progress" value={stats?.projects.inProgress ?? 0} color="text-amber-500" sub="projects" />
+              <StatCard label="Completed" value={stats?.projects.completed ?? 0} color="text-green-500" sub="projects" />
+              <StatCard label="Tasks in Progress" value={stats?.tasksInProgress ?? 0} color="text-purple-500" sub="tasks" />
             </div>
           )}
         </section>
@@ -104,9 +104,9 @@ export default function DashboardPage() {
             {/* Overdue */}
             <AlertCard
               icon={<AlertTriangle className="h-4 w-4 text-red-500" />}
-              title="Просроченные проекты"
+              title="Overdue Projects"
               count={stats?.overdueProjects.length ?? 0}
-              emptyText="Просроченных нет"
+              emptyText="No overdue projects"
               accentClass="border-red-200 dark:border-red-800"
             >
               {stats?.overdueProjects.map((p) => (
@@ -127,9 +127,9 @@ export default function DashboardPage() {
             {/* Week deadlines */}
             <AlertCard
               icon={<Clock className="h-4 w-4 text-amber-500" />}
-              title="Дедлайны на неделе"
+              title="Deadlines This Week"
               count={stats?.weekDeadlines.length ?? 0}
-              emptyText="Дедлайнов нет"
+              emptyText="No deadlines this week"
               accentClass="border-amber-200 dark:border-amber-800"
             >
               {stats?.weekDeadlines.map((p) => (
@@ -151,9 +151,9 @@ export default function DashboardPage() {
             {/* Active tasks */}
             <AlertCard
               icon={<ListTodo className="h-4 w-4 text-blue-500" />}
-              title="Активные задачи"
+              title="Active Tasks"
               count={stats?.activeTasks.length ?? 0}
-              emptyText="Активных задач нет"
+              emptyText="No active tasks"
               accentClass="border-blue-200 dark:border-blue-800"
             >
               {stats?.activeTasks.map((t) => (
@@ -164,7 +164,7 @@ export default function DashboardPage() {
                       <p className="text-xs text-muted-foreground truncate">{t.project.name}</p>
                     </div>
                     <span className={`text-xs whitespace-nowrap shrink-0 mt-0.5 ${t.status === "IN_PROGRESS" ? "text-amber-500" : "text-muted-foreground"}`}>
-                      {t.status === "IN_PROGRESS" ? "в работе" : "todo"}
+                      {t.status === "IN_PROGRESS" ? "in progress" : "todo"}
                     </span>
                   </div>
                 </Link>
@@ -175,7 +175,7 @@ export default function DashboardPage() {
 
         {/* Navigation */}
         <section>
-          <h2 className="text-lg font-semibold mb-4">Навигация</h2>
+          <h2 className="text-lg font-semibold mb-4">Navigation</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Link href="/clients">
               <Card className="hover:bg-accent transition-colors cursor-pointer">
@@ -183,8 +183,8 @@ export default function DashboardPage() {
                   <div className="flex items-center gap-3">
                     <Users className="h-6 w-6 text-primary" />
                     <div>
-                      <CardTitle>Клиенты</CardTitle>
-                      <CardDescription>Управление клиентами</CardDescription>
+                      <CardTitle>Clients</CardTitle>
+                      <CardDescription>Manage your clients</CardDescription>
                     </div>
                   </div>
                 </CardHeader>
@@ -197,8 +197,8 @@ export default function DashboardPage() {
                   <div className="flex items-center gap-3">
                     <FolderKanban className="h-6 w-6 text-primary" />
                     <div>
-                      <CardTitle>Проекты</CardTitle>
-                      <CardDescription>Все проекты</CardDescription>
+                      <CardTitle>Projects</CardTitle>
+                      <CardDescription>View all projects</CardDescription>
                     </div>
                   </div>
                 </CardHeader>
