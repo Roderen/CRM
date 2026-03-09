@@ -9,6 +9,8 @@ export async function GET() {
   }
 
   try {
+    const safe = async (p: Promise<number>) => p.catch(() => 0);
+
     const [
       clientsCount,
       projectsPlanned,
@@ -16,11 +18,11 @@ export async function GET() {
       projectsCompleted,
       tasksInProgress,
     ] = await Promise.all([
-      prisma.client.count({ where: { userId } }),
-      prisma.project.count({ where: { status: "PLANNED", client: { userId } } }),
-      prisma.project.count({ where: { status: "IN_PROGRESS", client: { userId } } }),
-      prisma.project.count({ where: { status: "COMPLETED", client: { userId } } }),
-      prisma.task.count({ where: { status: "IN_PROGRESS", project: { client: { userId } } } }),
+      safe(prisma.client.count({ where: { userId } })),
+      safe(prisma.project.count({ where: { status: "PLANNED", client: { userId } } })),
+      safe(prisma.project.count({ where: { status: "IN_PROGRESS", client: { userId } } })),
+      safe(prisma.project.count({ where: { status: "COMPLETED", client: { userId } } })),
+      safe(prisma.task.count({ where: { status: "IN_PROGRESS", project: { client: { userId } } } })),
     ]);
 
     return NextResponse.json({
