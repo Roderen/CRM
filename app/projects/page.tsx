@@ -297,7 +297,7 @@ export default function ProjectsPage() {
   useEffect(() => {
     fetch("/api/projects")
       .then((res) => res.json())
-      .then((data) => setProjects(data))
+      .then((data) => { if (Array.isArray(data)) setProjects(data); })
       .finally(() => setLoading(false));
   }, []);
 

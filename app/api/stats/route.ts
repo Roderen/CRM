@@ -8,27 +8,32 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const [
-    clientsCount,
-    projectsPlanned,
-    projectsInProgress,
-    projectsCompleted,
-    tasksInProgress,
-  ] = await Promise.all([
-    prisma.client.count({ where: { userId } }),
-    prisma.project.count({ where: { status: "PLANNED", client: { userId } } }),
-    prisma.project.count({ where: { status: "IN_PROGRESS", client: { userId } } }),
-    prisma.project.count({ where: { status: "COMPLETED", client: { userId } } }),
-    prisma.task.count({ where: { status: "IN_PROGRESS", project: { client: { userId } } } }),
-  ]);
+  try {
+    const [
+      clientsCount,
+      projectsPlanned,
+      projectsInProgress,
+      projectsCompleted,
+      tasksInProgress,
+    ] = await Promise.all([
+      prisma.client.count({ where: { userId } }),
+      prisma.project.count({ where: { status: "PLANNED", client: { userId } } }),
+      prisma.project.count({ where: { status: "IN_PROGRESS", client: { userId } } }),
+      prisma.project.count({ where: { status: "COMPLETED", client: { userId } } }),
+      prisma.task.count({ where: { status: "IN_PROGRESS", project: { client: { userId } } } }),
+    ]);
 
-  return NextResponse.json({
-    clientsCount,
-    projects: {
-      planned: projectsPlanned,
-      inProgress: projectsInProgress,
-      completed: projectsCompleted,
-    },
-    tasksInProgress,
-  });
+    return NextResponse.json({
+      clientsCount,
+      projects: {
+        planned: projectsPlanned,
+        inProgress: projectsInProgress,
+        completed: projectsCompleted,
+      },
+      tasksInProgress,
+    });
+  } catch (err) {
+    console.error("GET /api/stats error:", err);
+    return NextResponse.json({ error: "Database error" }, { status: 500 });
+  }
 }

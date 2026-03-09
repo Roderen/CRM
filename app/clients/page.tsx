@@ -49,7 +49,7 @@ export default function ClientsPage() {
     try {
       const res = await fetch("/api/clients");
       const data = await res.json();
-      setClients(data);
+      if (Array.isArray(data)) setClients(data);
     } finally {
       setLoading(false);
     }

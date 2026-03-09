@@ -29,7 +29,8 @@ export default function DashboardPage() {
   useEffect(() => {
     fetch("/api/stats")
       .then((r) => r.json())
-      .then((data) => setStats(data))
+      .then((data) => { if (data.clientsCount !== undefined) setStats(data); })
+      .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
 
