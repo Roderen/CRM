@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Plus, Loader2, FolderOpen, Pencil, Trash2 } from "lucide-react";
+import { Plus, Loader2, FolderOpen, Pencil, Trash2, Phone, Users, Mail, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 type ProjectStatus = "PLANNED" | "IN_PROGRESS" | "COMPLETED";
+type ActivityType = "CALL" | "MEETING" | "EMAIL" | "NOTE";
 
 interface Project {
   id: string;
@@ -22,6 +23,14 @@ interface Project {
   description: string | null;
   status: ProjectStatus;
   deadline: string | null;
+  createdAt: string;
+}
+
+interface Activity {
+  id: string;
+  type: ActivityType;
+  note: string;
+  date: string;
   createdAt: string;
 }
 
@@ -46,6 +55,27 @@ const STATUS_COLORS: Record<ProjectStatus, string> = {
   COMPLETED: "bg-green-100 text-green-700",
 };
 
+const ACTIVITY_ICONS: Record<ActivityType, React.ReactNode> = {
+  CALL: <Phone className="h-3.5 w-3.5" />,
+  MEETING: <Users className="h-3.5 w-3.5" />,
+  EMAIL: <Mail className="h-3.5 w-3.5" />,
+  NOTE: <FileText className="h-3.5 w-3.5" />,
+};
+
+const ACTIVITY_LABELS: Record<ActivityType, string> = {
+  CALL: "Call",
+  MEETING: "Meeting",
+  EMAIL: "Email",
+  NOTE: "Note",
+};
+
+const ACTIVITY_COLORS: Record<ActivityType, string> = {
+  CALL: "bg-green-100 text-green-700",
+  MEETING: "bg-purple-100 text-purple-700",
+  EMAIL: "bg-blue-100 text-blue-700",
+  NOTE: "bg-slate-100 text-slate-700",
+};
+
 export default function ClientDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
@@ -66,8 +96,20 @@ export default function ClientDetailPage() {
   });
   const [editSubmitting, setEditSubmitting] = useState(false);
 
+  // Activity state
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [activitiesLoading, setActivitiesLoading] = useState(true);
+  const [showActivityForm, setShowActivityForm] = useState(false);
+  const [activityForm, setActivityForm] = useState<{ type: ActivityType; note: string; date: string }>({
+    type: "CALL",
+    note: "",
+    date: new Date().toISOString().slice(0, 10),
+  });
+  const [activitySubmitting, setActivitySubmitting] = useState(false);
+
   useEffect(() => {
     fetchClient();
+    fetchActivities();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
@@ -83,6 +125,19 @@ export default function ClientDetailPage() {
       setClient(data);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function fetchActivities() {
+    setActivitiesLoading(true);
+    try {
+      const res = await fetch(`/api/clients/${id}/activities`);
+      if (res.ok) {
+        const data = await res.json();
+        setActivities(data);
+      }
+    } finally {
+      setActivitiesLoading(false);
     }
   }
 
@@ -160,6 +215,34 @@ export default function ClientDetailPage() {
     router.push("/clients");
   }
 
+  async function handleAddActivity(e: React.FormEvent) {
+    e.preventDefault();
+    if (!activityForm.note.trim()) return;
+
+    setActivitySubmitting(true);
+    try {
+      const res = await fetch(`/api/clients/${id}/activities`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(activityForm),
+      });
+      if (res.ok) {
+        const created = await res.json();
+        setActivities((prev) => [created, ...prev]);
+        setActivityForm({ type: "CALL", note: "", date: new Date().toISOString().slice(0, 10) });
+        setShowActivityForm(false);
+      }
+    } finally {
+      setActivitySubmitting(false);
+    }
+  }
+
+  async function handleDeleteActivity(activityId: string) {
+    if (!confirm("Delete this activity?")) return;
+    await fetch(`/api/activities/${activityId}`, { method: "DELETE" });
+    setActivities((prev) => prev.filter((a) => a.id !== activityId));
+  }
+
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
@@ -181,18 +264,18 @@ export default function ClientDetailPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
+      <header className="border-b px-6 py-4 flex items-center justify-between gap-4 overflow-x-auto">
+        <div className="flex items-center gap-3 shrink-0">
           <button
             onClick={() => router.push("/clients")}
-            className="text-muted-foreground hover:text-foreground transition-colors text-sm"
+            className="text-muted-foreground hover:text-foreground transition-colors text-sm whitespace-nowrap"
           >
             ← Clients
           </button>
           <span className="text-muted-foreground">/</span>
-          <h1 className="text-xl font-semibold">{client.name}</h1>
+          <h1 className="text-xl font-semibold whitespace-nowrap">{client.name}</h1>
         </div>
-        <Button onClick={() => setShowForm((v) => !v)} size="sm">
+        <Button onClick={() => setShowForm((v) => !v)} size="sm" className="shrink-0">
           <Plus className="h-4 w-4 mr-1" />
           Add Project
         </Button>
@@ -410,6 +493,130 @@ export default function ClientDetailPage() {
                   </Card>
                 )
               )}
+            </div>
+          )}
+        </section>
+
+        {/* Activity Log */}
+        <section>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-lg font-semibold">Activity Log ({activities.length})</h2>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setShowActivityForm((v) => !v)}
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              Add Activity
+            </Button>
+          </div>
+
+          {/* Add Activity Form */}
+          {showActivityForm && (
+            <Card className="mb-4">
+              <CardContent className="pt-4">
+                <form onSubmit={handleAddActivity} className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label>Type</Label>
+                      <select
+                        value={activityForm.type}
+                        onChange={(e) =>
+                          setActivityForm((f) => ({ ...f, type: e.target.value as ActivityType }))
+                        }
+                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+                      >
+                        <option value="CALL">Call</option>
+                        <option value="MEETING">Meeting</option>
+                        <option value="EMAIL">Email</option>
+                        <option value="NOTE">Note</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label>Date</Label>
+                      <Input
+                        type="date"
+                        value={activityForm.date}
+                        onChange={(e) =>
+                          setActivityForm((f) => ({ ...f, date: e.target.value }))
+                        }
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Note *</Label>
+                    <Input
+                      value={activityForm.note}
+                      onChange={(e) =>
+                        setActivityForm((f) => ({ ...f, note: e.target.value }))
+                      }
+                      placeholder="What happened..."
+                      required
+                    />
+                  </div>
+                  <div className="flex gap-2 justify-end">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowActivityForm(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button type="submit" size="sm" disabled={activitySubmitting}>
+                      {activitySubmitting && (
+                        <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                      )}
+                      Save
+                    </Button>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Activities List */}
+          {activitiesLoading ? (
+            <div className="flex justify-center py-6">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : activities.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground text-sm">
+              No activity yet. Log a call, meeting or email!
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {activities.map((activity) => (
+                <div
+                  key={activity.id}
+                  className="flex items-start gap-3 p-3 rounded-lg border bg-card"
+                >
+                  <span
+                    className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium shrink-0 mt-0.5 ${ACTIVITY_COLORS[activity.type]}`}
+                  >
+                    {ACTIVITY_ICONS[activity.type]}
+                    {ACTIVITY_LABELS[activity.type]}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm">{activity.note}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {new Date(activity.date).toLocaleDateString("en-GB", {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      })}
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 text-muted-foreground hover:text-destructive shrink-0"
+                    onClick={() => handleDeleteActivity(activity.id)}
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </div>
+              ))}
             </div>
           )}
         </section>
