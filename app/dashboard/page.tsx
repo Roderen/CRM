@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { UserButton } from "@clerk/nextjs";
 import Link from "next/link";
-import { Users, FolderKanban, CheckSquare, Loader2, AlertTriangle, Clock, ListTodo } from "lucide-react";
+import { Users, FolderKanban, CheckSquare, Loader2, AlertTriangle, Clock, ListTodo, FileText } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import {
   Card,
@@ -176,7 +176,7 @@ export default function DashboardPage() {
         {/* Navigation */}
         <section>
           <h2 className="text-lg font-semibold mb-4">Navigation</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <Link href="/clients">
               <Card className="hover:bg-accent transition-colors cursor-pointer">
                 <CardHeader>
@@ -199,6 +199,20 @@ export default function DashboardPage() {
                     <div>
                       <CardTitle>Projects</CardTitle>
                       <CardDescription>View all projects</CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+              </Card>
+            </Link>
+
+            <Link href="/invoices">
+              <Card className="hover:bg-accent transition-colors cursor-pointer">
+                <CardHeader>
+                  <div className="flex items-center gap-3">
+                    <FileText className="h-6 w-6 text-primary" />
+                    <div>
+                      <CardTitle>Invoices</CardTitle>
+                      <CardDescription>Manage invoices & payments</CardDescription>
                     </div>
                   </div>
                 </CardHeader>
