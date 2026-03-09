@@ -165,7 +165,7 @@ function ProjectCard({
               onClick={(e) => e.stopPropagation()}
             >
               <Button
-                variant="ghost"
+                variant="outline"
                 size="icon"
                 className="h-6 w-6"
                 onClick={(e) => onEdit(project, e)}
@@ -173,9 +173,9 @@ function ProjectCard({
                 <Pencil className="h-3 w-3" />
               </Button>
               <Button
-                variant="ghost"
+                variant="outline"
                 size="icon"
-                className="h-6 w-6 text-destructive hover:text-destructive"
+                className="h-6 w-6 text-destructive hover:text-destructive hover:border-destructive"
                 onClick={(e) => onDelete(project.id, e)}
               >
                 <Trash2 className="h-3 w-3" />
