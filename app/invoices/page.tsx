@@ -9,14 +9,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { downloadCSV } from "@/lib/export";
-
-type InvoiceStatus = "DRAFT" | "SENT" | "PAID" | "OVERDUE";
-
-interface InvoiceItem {
-  description: string;
-  quantity: number;
-  unitPrice: number;
-}
+import { fmtAmount } from "@/lib/format";
+import {
+  type InvoiceStatus,
+  type InvoiceItem,
+  STATUS_LABELS,
+  STATUS_COLORS,
+  calcTotal,
+} from "@/lib/invoice-utils";
 
 interface Invoice {
   id: string;
@@ -41,28 +41,6 @@ interface Project {
   name: string;
   clientId: string;
   client: { id: string; name: string; company: string | null };
-}
-
-const STATUS_LABELS: Record<InvoiceStatus, string> = {
-  DRAFT: "Draft",
-  SENT: "Sent",
-  PAID: "Paid",
-  OVERDUE: "Overdue",
-};
-
-const STATUS_COLORS: Record<InvoiceStatus, string> = {
-  DRAFT: "text-slate-500 bg-slate-100 dark:bg-slate-800",
-  SENT: "text-blue-600 bg-blue-100 dark:bg-blue-900/30",
-  PAID: "text-green-600 bg-green-100 dark:bg-green-900/30",
-  OVERDUE: "text-red-600 bg-red-100 dark:bg-red-900/30",
-};
-
-function calcTotal(items: InvoiceItem[]) {
-  return items.reduce((sum, i) => sum + i.quantity * i.unitPrice, 0);
-}
-
-function fmt(n: number) {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2 }).format(n);
 }
 
 const EMPTY_ITEM: InvoiceItem = { description: "", quantity: 1, unitPrice: 0 };
@@ -211,11 +189,11 @@ export default function InvoicesPage() {
         {/* Summary */}
         {!loading && invoices.length > 0 && (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <SummaryCard label="Total Invoiced" value={fmt(total)} color="text-foreground" />
-            <SummaryCard label="Unpaid" value={fmt(unpaid)} color="text-red-500" />
+            <SummaryCard label="Total Invoiced" value={fmtAmount(total)} color="text-foreground" />
+            <SummaryCard label="Unpaid" value={fmtAmount(unpaid)} color="text-red-500" />
             <SummaryCard
               label="Paid"
-              value={fmt(invoices.filter((i) => i.status === "PAID").reduce((s, i) => s + calcTotal(i.items), 0))}
+              value={fmtAmount(invoices.filter((i) => i.status === "PAID").reduce((s, i) => s + calcTotal(i.items), 0))}
               color="text-green-600"
             />
             <SummaryCard label="Invoices" value={String(invoices.length)} color="text-blue-500" />
@@ -317,7 +295,7 @@ export default function InvoicesPage() {
                     Add Line
                   </Button>
                   <p className="text-sm font-medium text-right">
-                    Total: {fmt(calcTotal(form.items))}
+                    Total: {fmtAmount(calcTotal(form.items))}
                   </p>
                 </div>
 
@@ -379,7 +357,7 @@ export default function InvoicesPage() {
                     </div>
                     <div className="flex items-center gap-3 shrink-0">
                       <div className="text-right">
-                        <p className="font-semibold text-sm">{fmt(calcTotal(inv.items))}</p>
+                        <p className="font-semibold text-sm">{fmtAmount(calcTotal(inv.items))}</p>
                         {inv.dueDate && (
                           <p className="text-xs text-muted-foreground">
                             Due {new Date(inv.dueDate).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}

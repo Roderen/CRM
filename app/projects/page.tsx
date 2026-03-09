@@ -22,6 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { downloadCSV } from "@/lib/export";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { fmtCurrency } from "@/lib/format";
 import {
   DndContext,
   DragEndEvent,
@@ -51,10 +52,6 @@ interface Project {
     name: string;
     company: string | null;
   };
-}
-
-function fmt(n: number) {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
 }
 
 const COLUMNS: { id: ProjectStatus; label: string; color: string; headerColor: string }[] = [
@@ -167,7 +164,7 @@ function ProjectCard({
                   <p>⏱ {new Date(project.deadline).toLocaleDateString()}</p>
                 )}
                 {project.budget != null && (
-                  <p className="text-green-600 font-medium">{fmt(project.budget)}</p>
+                  <p className="text-green-600 font-medium">{fmtCurrency(project.budget)}</p>
                 )}
               </CardDescription>
             </div>

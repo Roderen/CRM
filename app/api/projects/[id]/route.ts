@@ -25,26 +25,31 @@ export async function PATCH(
     return NextResponse.json({ error: "Invalid status" }, { status: 400 });
   }
 
-  const existing = await prisma.project.findFirst({
-    where: { id, client: { userId } },
-  });
+  try {
+    const existing = await prisma.project.findFirst({
+      where: { id, client: { userId } },
+    });
 
-  if (!existing) {
-    return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    if (!existing) {
+      return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    }
+
+    const updated = await prisma.project.update({
+      where: { id },
+      data: {
+        name,
+        description: description || null,
+        deadline: deadline ? new Date(deadline) : null,
+        status: status ?? existing.status,
+        budget: budget !== undefined ? (budget ? parseFloat(budget) : null) : existing.budget,
+      },
+    });
+
+    return NextResponse.json(updated);
+  } catch (err) {
+    console.error("PATCH /api/projects/[id] error:", err);
+    return NextResponse.json({ error: "Database error" }, { status: 500 });
   }
-
-  const updated = await prisma.project.update({
-    where: { id },
-    data: {
-      name,
-      description: description || null,
-      deadline: deadline ? new Date(deadline) : null,
-      status: status ?? existing.status,
-      budget: budget !== undefined ? (budget ? parseFloat(budget) : null) : existing.budget,
-    },
-  });
-
-  return NextResponse.json(updated);
 }
 
 export async function DELETE(
@@ -59,15 +64,20 @@ export async function DELETE(
 
   const { id } = await params;
 
-  const existing = await prisma.project.findFirst({
-    where: { id, client: { userId } },
-  });
+  try {
+    const existing = await prisma.project.findFirst({
+      where: { id, client: { userId } },
+    });
 
-  if (!existing) {
-    return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    if (!existing) {
+      return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    }
+
+    await prisma.project.delete({ where: { id } });
+
+    return new NextResponse(null, { status: 204 });
+  } catch (err) {
+    console.error("DELETE /api/projects/[id] error:", err);
+    return NextResponse.json({ error: "Database error" }, { status: 500 });
   }
-
-  await prisma.project.delete({ where: { id } });
-
-  return new NextResponse(null, { status: 204 });
 }

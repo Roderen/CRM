@@ -17,10 +17,14 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await params;
-  const invoice = await getInvoiceForUser(id, userId);
-  if (!invoice) return NextResponse.json({ error: "Not found" }, { status: 404 });
-
-  return NextResponse.json(invoice);
+  try {
+    const invoice = await getInvoiceForUser(id, userId);
+    if (!invoice) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    return NextResponse.json(invoice);
+  } catch (err) {
+    console.error("GET /api/invoices/[id] error:", err);
+    return NextResponse.json({ error: "Database error" }, { status: 500 });
+  }
 }
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -61,9 +65,13 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await params;
-  const existing = await getInvoiceForUser(id, userId);
-  if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
-
-  await prisma.invoice.delete({ where: { id } });
-  return NextResponse.json({ ok: true });
+  try {
+    const existing = await getInvoiceForUser(id, userId);
+    if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    await prisma.invoice.delete({ where: { id } });
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    console.error("DELETE /api/invoices/[id] error:", err);
+    return NextResponse.json({ error: "Database error" }, { status: 500 });
+  }
 }

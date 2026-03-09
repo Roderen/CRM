@@ -48,16 +48,20 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Client not found" }, { status: 404 });
   }
 
-  const project = await prisma.project.create({
-    data: {
-      name,
-      description,
-      clientId,
-      deadline: deadline ? new Date(deadline) : null,
-      status: status ?? "PLANNED",
-      budget: budget ? parseFloat(budget) : null,
-    },
-  });
-
-  return NextResponse.json(project, { status: 201 });
+  try {
+    const project = await prisma.project.create({
+      data: {
+        name,
+        description,
+        clientId,
+        deadline: deadline ? new Date(deadline) : null,
+        status: status ?? "PLANNED",
+        budget: budget ? parseFloat(budget) : null,
+      },
+    });
+    return NextResponse.json(project, { status: 201 });
+  } catch (err) {
+    console.error("POST /api/projects error:", err);
+    return NextResponse.json({ error: "Database error" }, { status: 500 });
+  }
 }

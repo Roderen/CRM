@@ -15,6 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { downloadCSV } from "@/lib/export";
+import { fmtCurrency } from "@/lib/format";
 
 interface Client {
   id: string;
@@ -24,10 +25,6 @@ interface Client {
   company: string | null;
   dealAmount: number | null;
   createdAt: string;
-}
-
-function fmt(n: number) {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
 }
 
 export default function ClientsPage() {
@@ -358,7 +355,7 @@ export default function ClientsPage() {
                           {client.email && <p>{client.email}</p>}
                           {client.phone && <p>{client.phone}</p>}
                           {client.dealAmount != null && (
-                            <p className="text-green-600 font-medium">{fmt(client.dealAmount)}</p>
+                            <p className="text-green-600 font-medium">{fmtCurrency(client.dealAmount)}</p>
                           )}
                         </CardDescription>
                       </div>

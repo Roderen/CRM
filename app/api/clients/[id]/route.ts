@@ -14,20 +14,25 @@ export async function GET(
 
   const { id } = await params;
 
-  const client = await prisma.client.findFirst({
-    where: { id, userId },
-    include: {
-      projects: {
-        orderBy: { createdAt: "desc" },
+  try {
+    const client = await prisma.client.findFirst({
+      where: { id, userId },
+      include: {
+        projects: {
+          orderBy: { createdAt: "desc" },
+        },
       },
-    },
-  });
+    });
 
-  if (!client) {
-    return NextResponse.json({ error: "Client not found" }, { status: 404 });
+    if (!client) {
+      return NextResponse.json({ error: "Client not found" }, { status: 404 });
+    }
+
+    return NextResponse.json(client);
+  } catch (err) {
+    console.error("GET /api/clients/[id] error:", err);
+    return NextResponse.json({ error: "Database error" }, { status: 500 });
   }
-
-  return NextResponse.json(client);
 }
 
 export async function PATCH(
@@ -48,23 +53,28 @@ export async function PATCH(
     return NextResponse.json({ error: "Name is required" }, { status: 400 });
   }
 
-  const existing = await prisma.client.findFirst({ where: { id, userId } });
-  if (!existing) {
-    return NextResponse.json({ error: "Client not found" }, { status: 404 });
+  try {
+    const existing = await prisma.client.findFirst({ where: { id, userId } });
+    if (!existing) {
+      return NextResponse.json({ error: "Client not found" }, { status: 404 });
+    }
+
+    const updated = await prisma.client.update({
+      where: { id },
+      data: {
+        name,
+        email: email || null,
+        phone: phone || null,
+        company: company || null,
+        dealAmount: dealAmount ? parseFloat(dealAmount) : null,
+      },
+    });
+
+    return NextResponse.json(updated);
+  } catch (err) {
+    console.error("PATCH /api/clients/[id] error:", err);
+    return NextResponse.json({ error: "Database error" }, { status: 500 });
   }
-
-  const updated = await prisma.client.update({
-    where: { id },
-    data: {
-      name,
-      email: email || null,
-      phone: phone || null,
-      company: company || null,
-      dealAmount: dealAmount ? parseFloat(dealAmount) : null,
-    },
-  });
-
-  return NextResponse.json(updated);
 }
 
 export async function DELETE(
@@ -79,12 +89,17 @@ export async function DELETE(
 
   const { id } = await params;
 
-  const existing = await prisma.client.findFirst({ where: { id, userId } });
-  if (!existing) {
-    return NextResponse.json({ error: "Client not found" }, { status: 404 });
+  try {
+    const existing = await prisma.client.findFirst({ where: { id, userId } });
+    if (!existing) {
+      return NextResponse.json({ error: "Client not found" }, { status: 404 });
+    }
+
+    await prisma.client.delete({ where: { id } });
+
+    return new NextResponse(null, { status: 204 });
+  } catch (err) {
+    console.error("DELETE /api/clients/[id] error:", err);
+    return NextResponse.json({ error: "Database error" }, { status: 500 });
   }
-
-  await prisma.client.delete({ where: { id } });
-
-  return new NextResponse(null, { status: 204 });
 }

@@ -7,14 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ThemeToggle } from "@/components/theme-toggle";
-
-type InvoiceStatus = "DRAFT" | "SENT" | "PAID" | "OVERDUE";
-
-interface InvoiceItem {
-  description: string;
-  quantity: number;
-  unitPrice: number;
-}
+import { fmtAmount } from "@/lib/format";
+import {
+  type InvoiceStatus,
+  type InvoiceItem,
+  STATUS_LABELS,
+  STATUS_COLORS,
+  calcTotal,
+} from "@/lib/invoice-utils";
 
 interface Invoice {
   id: string;
@@ -28,29 +28,7 @@ interface Invoice {
   project: { id: string; name: string } | null;
 }
 
-const STATUS_LABELS: Record<InvoiceStatus, string> = {
-  DRAFT: "Draft",
-  SENT: "Sent",
-  PAID: "Paid",
-  OVERDUE: "Overdue",
-};
-
-const STATUS_COLORS: Record<InvoiceStatus, string> = {
-  DRAFT: "text-slate-600 bg-slate-100 dark:bg-slate-800 dark:text-slate-300",
-  SENT: "text-blue-600 bg-blue-100 dark:bg-blue-900/30",
-  PAID: "text-green-600 bg-green-100 dark:bg-green-900/30",
-  OVERDUE: "text-red-600 bg-red-100 dark:bg-red-900/30",
-};
-
 const STATUSES: InvoiceStatus[] = ["DRAFT", "SENT", "PAID", "OVERDUE"];
-
-function fmt(n: number) {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2 }).format(n);
-}
-
-function calcTotal(items: InvoiceItem[]) {
-  return items.reduce((sum, i) => sum + i.quantity * i.unitPrice, 0);
-}
 
 function fmtDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
@@ -303,11 +281,11 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
                           className="h-8 text-sm text-right w-28 ml-auto"
                         />
                       ) : (
-                        fmt(item.unitPrice)
+                        fmtAmount(item.unitPrice)
                       )}
                     </td>
                     <td className="py-3 text-right font-medium">
-                      {fmt(item.quantity * item.unitPrice)}
+                      {fmtAmount(item.quantity * item.unitPrice)}
                     </td>
                   </tr>
                 ))}
@@ -320,7 +298,7 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
             <div className="w-56">
               <div className="flex justify-between py-3 border-t-2 border-foreground">
                 <span className="font-bold text-lg">Total</span>
-                <span className="font-bold text-lg">{fmt(total)}</span>
+                <span className="font-bold text-lg">{fmtAmount(total)}</span>
               </div>
             </div>
           </div>
