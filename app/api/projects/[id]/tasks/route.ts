@@ -16,7 +16,7 @@ export async function GET(_request: Request, { params }: Params) {
     where: { id, client: { userId } },
     include: {
       client: { select: { id: true, name: true } },
-      tasks: { orderBy: [{ position: "asc" }, { createdAt: "asc" }] },
+      tasks: { orderBy: { createdAt: "asc" } },
     },
   });
 
@@ -52,17 +52,11 @@ export async function POST(request: Request, { params }: Params) {
 
   const taskStatus = status ?? "TODO";
 
-  // position = number of tasks in this column so far
-  const count = await prisma.task.count({
-    where: { projectId: id, status: taskStatus },
-  });
-
   const task = await prisma.task.create({
     data: {
       title: title.trim(),
       description: description || null,
       status: taskStatus,
-      position: count,
       projectId: id,
     },
   });
