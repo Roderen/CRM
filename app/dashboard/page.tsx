@@ -70,9 +70,9 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b px-6 py-4 flex items-center justify-between">
-        <h1 className="text-xl font-semibold">CRM Dashboard</h1>
-        <div className="flex items-center gap-2">
+      <header className="border-b px-6 py-4 flex items-center justify-between gap-4 overflow-x-auto">
+        <h1 className="text-xl font-semibold whitespace-nowrap shrink-0">CRM Dashboard</h1>
+        <div className="flex items-center gap-2 shrink-0">
           <ThemeToggle />
           <UserButton />
         </div>

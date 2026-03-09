@@ -144,21 +144,21 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
   return (
     <div className="min-h-screen bg-background">
       {/* Header — hidden on print */}
-      <header className="border-b px-6 py-4 flex items-center justify-between gap-4 print:hidden">
-        <div className="flex items-center gap-3">
+      <header className="border-b px-6 py-4 flex items-center justify-between gap-4 overflow-x-auto print:hidden">
+        <div className="flex items-center gap-3 shrink-0">
           <button
             onClick={() => router.push("/invoices")}
-            className="text-muted-foreground hover:text-foreground transition-colors text-sm"
+            className="text-muted-foreground hover:text-foreground transition-colors text-sm whitespace-nowrap"
           >
             ← Invoices
           </button>
-          <span className="text-muted-foreground">/</span>
-          <h1 className="text-xl font-semibold">{invoice.number}</h1>
-          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[invoice.status]}`}>
+          <span className="text-muted-foreground shrink-0">/</span>
+          <h1 className="text-xl font-semibold whitespace-nowrap">{invoice.number}</h1>
+          <span className={`text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap shrink-0 ${STATUS_COLORS[invoice.status]}`}>
             {STATUS_LABELS[invoice.status]}
           </span>
         </div>
-        <div className="flex gap-2 items-center">
+        <div className="flex gap-2 items-center shrink-0">
           <ThemeToggle />
           {editing ? (
             <>
