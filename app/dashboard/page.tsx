@@ -5,6 +5,7 @@ import { UserButton } from "@clerk/nextjs";
 import Link from "next/link";
 import { Users, FolderKanban, CheckSquare, Loader2, AlertTriangle, Clock, ListTodo, FileText, TrendingUp } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { GlobalSearch } from "@/components/global-search";
 import {
   Card,
   CardHeader,
@@ -74,8 +75,9 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b px-6 py-4 flex items-center justify-between gap-4 overflow-x-auto">
+      <header className="border-b px-6 py-4 flex items-center gap-4">
         <h1 className="text-xl font-semibold whitespace-nowrap shrink-0">CRM Dashboard</h1>
+        <GlobalSearch />
         <div className="flex items-center gap-2 shrink-0">
           <ThemeToggle />
           <UserButton />
