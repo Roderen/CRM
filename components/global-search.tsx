@@ -69,41 +69,28 @@ export function GlobalSearch() {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<FlatItem[]>([]);
   const [loading, setLoading] = useState(false);
-  const [open, setOpen] = useState(false);
+  const [focused, setFocused] = useState(false);
   const [cursor, setCursor] = useState(-1);
-  const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const blurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const search = useCallback((q: string) => {
-    if (q.length < 2) { setResults([]); setOpen(false); return; }
+    if (q.length < 2) { setResults([]); setLoading(false); return; }
     setLoading(true);
     fetch(`/api/search?q=${encodeURIComponent(q)}`)
       .then((r) => r.json())
-      .then((data: SearchResult) => {
-        setResults(flattenResults(data));
-        setOpen(true);
-      })
-      .catch(() => {})
+      .then((data: SearchResult) => setResults(flattenResults(data)))
+      .catch(() => setResults([]))
       .finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => search(query), 300);
-    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    if (query.length < 2) { setResults([]); return; }
+    searchTimerRef.current = setTimeout(() => search(query), 300);
+    return () => { if (searchTimerRef.current) clearTimeout(searchTimerRef.current); };
   }, [query, search]);
-
-  // Close on outside click
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
 
   // Cmd/Ctrl+K to focus
   useEffect(() => {
@@ -118,23 +105,35 @@ export function GlobalSearch() {
     return () => document.removeEventListener("keydown", handler);
   }, []);
 
+  const isOpen = focused && query.length >= 2;
+
   const navigate = (item: FlatItem) => {
     router.push(item.href);
-    setOpen(false);
+    setFocused(false);
     setQuery("");
     setCursor(-1);
   };
 
+  const onFocus = () => {
+    if (blurTimerRef.current) clearTimeout(blurTimerRef.current);
+    setFocused(true);
+  };
+
+  const onBlur = () => {
+    // Delay so onMouseDown on result buttons fires before focus leaves
+    blurTimerRef.current = setTimeout(() => setFocused(false), 150);
+  };
+
   const onKeyDown = (e: React.KeyboardEvent) => {
-    if (!open || results.length === 0) return;
+    if (!isOpen) return;
     if (e.key === "ArrowDown") { e.preventDefault(); setCursor((c) => Math.min(c + 1, results.length - 1)); }
     else if (e.key === "ArrowUp") { e.preventDefault(); setCursor((c) => Math.max(c - 1, -1)); }
     else if (e.key === "Enter" && cursor >= 0) { navigate(results[cursor]); }
-    else if (e.key === "Escape") { setOpen(false); setCursor(-1); inputRef.current?.blur(); }
+    else if (e.key === "Escape") { setFocused(false); setCursor(-1); inputRef.current?.blur(); }
   };
 
   return (
-    <div ref={containerRef} className="relative w-full">
+    <div className="relative w-full">
       <div className="relative">
         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
         {loading && (
@@ -144,14 +143,15 @@ export function GlobalSearch() {
           ref={inputRef}
           value={query}
           onChange={(e) => { setQuery(e.target.value); setCursor(-1); }}
-          onFocus={() => { if (results.length > 0) setOpen(true); }}
+          onFocus={onFocus}
+          onBlur={onBlur}
           onKeyDown={onKeyDown}
           placeholder="Search… ⌘K"
           className="w-full h-9 rounded-md border bg-background pl-8 pr-8 text-sm outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground"
         />
       </div>
 
-      {open && results.length > 0 && (
+      {isOpen && results.length > 0 && (
         <div className="absolute top-full left-0 right-0 mt-1 z-50 rounded-md border bg-popover shadow-md overflow-hidden">
           {results.map((item, i) => (
             <button
@@ -175,7 +175,7 @@ export function GlobalSearch() {
         </div>
       )}
 
-      {open && query.length >= 2 && results.length === 0 && !loading && (
+      {isOpen && results.length === 0 && !loading && (
         <div className="absolute top-full left-0 right-0 mt-1 z-50 rounded-md border bg-popover shadow-md px-3 py-4 text-sm text-muted-foreground text-center">
           No results for &ldquo;{query}&rdquo;
         </div>
