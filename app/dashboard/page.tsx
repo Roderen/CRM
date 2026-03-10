@@ -83,6 +83,54 @@ export default function DashboardPage() {
       </header>
 
       <main className="p-6 max-w-5xl mx-auto space-y-8">
+        {/* Navigation */}
+        <section>
+          <h2 className="text-lg font-semibold mb-4">Navigation</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <Link href="/clients">
+              <Card className="hover:bg-accent transition-colors cursor-pointer">
+                <CardHeader>
+                  <div className="flex items-center gap-3">
+                    <Users className="h-6 w-6 text-primary" />
+                    <div>
+                      <CardTitle>Clients</CardTitle>
+                      <CardDescription>Manage your clients</CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+              </Card>
+            </Link>
+
+            <Link href="/projects">
+              <Card className="hover:bg-accent transition-colors cursor-pointer">
+                <CardHeader>
+                  <div className="flex items-center gap-3">
+                    <FolderKanban className="h-6 w-6 text-primary" />
+                    <div>
+                      <CardTitle>Projects</CardTitle>
+                      <CardDescription>View all projects</CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+              </Card>
+            </Link>
+
+            <Link href="/invoices">
+              <Card className="hover:bg-accent transition-colors cursor-pointer">
+                <CardHeader>
+                  <div className="flex items-center gap-3">
+                    <FileText className="h-6 w-6 text-primary" />
+                    <div>
+                      <CardTitle>Invoices</CardTitle>
+                      <CardDescription>Manage invoices & payments</CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+              </Card>
+            </Link>
+          </div>
+        </section>
+
         {/* Counts */}
         <section>
           <h2 className="text-lg font-semibold mb-4">Overview</h2>
@@ -236,53 +284,6 @@ export default function DashboardPage() {
           </section>
         )}
 
-        {/* Navigation */}
-        <section>
-          <h2 className="text-lg font-semibold mb-4">Navigation</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <Link href="/clients">
-              <Card className="hover:bg-accent transition-colors cursor-pointer">
-                <CardHeader>
-                  <div className="flex items-center gap-3">
-                    <Users className="h-6 w-6 text-primary" />
-                    <div>
-                      <CardTitle>Clients</CardTitle>
-                      <CardDescription>Manage your clients</CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-              </Card>
-            </Link>
-
-            <Link href="/projects">
-              <Card className="hover:bg-accent transition-colors cursor-pointer">
-                <CardHeader>
-                  <div className="flex items-center gap-3">
-                    <FolderKanban className="h-6 w-6 text-primary" />
-                    <div>
-                      <CardTitle>Projects</CardTitle>
-                      <CardDescription>View all projects</CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-              </Card>
-            </Link>
-
-            <Link href="/invoices">
-              <Card className="hover:bg-accent transition-colors cursor-pointer">
-                <CardHeader>
-                  <div className="flex items-center gap-3">
-                    <FileText className="h-6 w-6 text-primary" />
-                    <div>
-                      <CardTitle>Invoices</CardTitle>
-                      <CardDescription>Manage invoices & payments</CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-              </Card>
-            </Link>
-          </div>
-        </section>
       </main>
     </div>
   );
