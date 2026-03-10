@@ -1,9 +1,7 @@
 const CACHE_NAME = "crm-v1";
 
-// Static assets to cache on install
+// Static assets to cache on install (no HTML pages — they may redirect)
 const PRECACHE_URLS = [
-  "/",
-  "/dashboard",
   "/manifest.json",
   "/icons/icon-192.svg",
   "/icons/icon-512.svg",
@@ -32,28 +30,21 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // For navigation requests: network first, fallback to cache
+  // For navigation requests: always go to network, never cache
   if (request.mode === "navigate") {
-    event.respondWith(
-      fetch(request)
-        .then((response) => {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
-          return response;
-        })
-        .catch(() => caches.match(request))
-    );
     return;
   }
 
-  // For static assets: cache first, fallback to network
+  // For static assets: cache first, fallback to network (only cache ok responses)
   event.respondWith(
     caches.match(request).then(
       (cached) =>
         cached ||
         fetch(request).then((response) => {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+          if (response.ok) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+          }
           return response;
         })
     )
