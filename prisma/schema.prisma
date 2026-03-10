@@ -14,7 +14,6 @@ model Client {
   email       String?
   phone       String?
   company     String?
-  dealAmount  Float?     // сумма сделки
   projects    Project[]
   activities  Activity[]
   invoices    Invoice[]

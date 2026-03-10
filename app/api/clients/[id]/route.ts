@@ -47,7 +47,7 @@ export async function PATCH(
 
   const { id } = await params;
   const body = await request.json();
-  const { name, email, phone, company, dealAmount } = body;
+  const { name, email, phone, company } = body;
 
   if (!name) {
     return NextResponse.json({ error: "Name is required" }, { status: 400 });
@@ -66,7 +66,6 @@ export async function PATCH(
         email: email || null,
         phone: phone || null,
         company: company || null,
-        dealAmount: dealAmount ? parseFloat(dealAmount) : null,
       },
     });
 

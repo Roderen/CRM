@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Plus, Loader2, FolderOpen, Pencil, Trash2, Phone, Users, Mail, FileText } from "lucide-react";
+import { Plus, Loader2, FolderOpen, Pencil, Trash2, Phone, Users, Mail, FileText, DollarSign } from "lucide-react";
+import { fmtCurrency } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import {
@@ -24,6 +25,7 @@ interface Project {
   description: string | null;
   status: ProjectStatus;
   deadline: string | null;
+  budget: number | null;
   createdAt: string;
 }
 
@@ -296,6 +298,17 @@ export default function ClientDetailPage() {
                   {client.company && <p>{client.company}</p>}
                   {client.email && <p>{client.email}</p>}
                   {client.phone && <p>{client.phone}</p>}
+                  {(() => {
+                    const total = client.projects.some((p) => p.budget != null)
+                      ? client.projects.reduce((sum, p) => sum + (p.budget ?? 0), 0)
+                      : null;
+                    return total != null ? (
+                      <p className="flex items-center gap-1 text-green-600 font-medium">
+                        <DollarSign className="h-3.5 w-3.5" />
+                        {fmtCurrency(total)}
+                      </p>
+                    ) : null;
+                  })()}
                 </CardDescription>
               </div>
               <Button
@@ -464,6 +477,11 @@ export default function ClientDetailPage() {
                           {project.deadline && (
                             <CardDescription>
                               Deadline: {new Date(project.deadline).toLocaleDateString()}
+                            </CardDescription>
+                          )}
+                          {project.budget != null && (
+                            <CardDescription className="text-green-600 font-medium">
+                              {fmtCurrency(project.budget)}
                             </CardDescription>
                           )}
                         </div>
