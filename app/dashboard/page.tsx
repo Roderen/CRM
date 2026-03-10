@@ -140,12 +140,11 @@ export default function DashboardPage() {
               <span className="text-sm">Loading…</span>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <StatCard label="Clients" value={stats?.clientsCount ?? 0} color="text-blue-500" />
               <StatCard label="Planned" value={stats?.projects.planned ?? 0} color="text-slate-500" sub="projects" />
               <StatCard label="In Progress" value={stats?.projects.inProgress ?? 0} color="text-amber-500" sub="projects" />
               <StatCard label="Completed" value={stats?.projects.completed ?? 0} color="text-green-500" sub="projects" />
-              <StatCard label="Tasks in Progress" value={stats?.tasksInProgress ?? 0} color="text-purple-500" sub="tasks" />
             </div>
           )}
         </section>
