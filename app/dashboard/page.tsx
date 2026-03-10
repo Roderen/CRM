@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { UserButton } from "@clerk/nextjs";
 import Link from "next/link";
-import { Users, FolderKanban, CheckSquare, Loader2, AlertTriangle, Clock, ListTodo, FileText } from "lucide-react";
+import { Users, FolderKanban, CheckSquare, Loader2, AlertTriangle, Clock, ListTodo, FileText, TrendingUp } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import {
   Card,
@@ -12,6 +12,7 @@ import {
   CardDescription,
   CardContent,
 } from "@/components/ui/card";
+import { fmtCurrency } from "@/lib/format";
 
 interface ProjectRow {
   id: string;
@@ -35,6 +36,9 @@ interface Stats {
   overdueProjects: ProjectRow[];
   weekDeadlines: ProjectRow[];
   activeTasks: TaskRow[];
+  revenueByMonth: { month: string; revenue: number }[];
+  totalRevenue: number;
+  invoices: { draft: number; sent: number; paid: number; overdue: number };
 }
 
 function formatDeadline(dateStr: string) {
@@ -97,6 +101,65 @@ export default function DashboardPage() {
             </div>
           )}
         </section>
+
+        {/* Charts */}
+        {!loading && stats && (
+          <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Revenue chart */}
+            <Card>
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-sm font-semibold flex items-center gap-1.5">
+                      <TrendingUp className="h-4 w-4 text-green-500" />
+                      Revenue (6 months)
+                    </CardTitle>
+                    <CardDescription className="text-xl font-bold text-foreground mt-1">
+                      {fmtCurrency(stats.totalRevenue)}
+                    </CardDescription>
+                  </div>
+                  <Link href="/invoices" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+                    View invoices →
+                  </Link>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <RevenueChart data={stats.revenueByMonth} />
+              </CardContent>
+            </Card>
+
+            {/* Projects + Invoices breakdown */}
+            <div className="space-y-4">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-semibold flex items-center gap-1.5">
+                    <FolderKanban className="h-4 w-4 text-blue-500" />
+                    Projects by Status
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ProjectStatusBar
+                    planned={stats.projects.planned}
+                    inProgress={stats.projects.inProgress}
+                    completed={stats.projects.completed}
+                  />
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-semibold flex items-center gap-1.5">
+                    <FileText className="h-4 w-4 text-purple-500" />
+                    Invoices by Status
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <InvoiceStatusBar invoices={stats.invoices} />
+                </CardContent>
+              </Card>
+            </div>
+          </section>
+        )}
 
         {/* Alerts */}
         {!loading && (
@@ -224,6 +287,148 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+// ── Chart components ──────────────────────────────────────────────────────────
+
+function RevenueChart({ data }: { data: { month: string; revenue: number }[] }) {
+  const max = Math.max(...data.map((d) => d.revenue), 1);
+  const hasAny = data.some((d) => d.revenue > 0);
+
+  if (!hasAny) {
+    return (
+      <p className="text-sm text-muted-foreground py-4 text-center">
+        No paid invoices yet
+      </p>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-end gap-1.5 h-28">
+        {data.map(({ month, revenue }) => {
+          const heightPct = revenue > 0 ? Math.max((revenue / max) * 100, 4) : 0;
+          return (
+            <div key={month} className="flex-1 flex flex-col items-center gap-1 h-full justify-end group relative">
+              {revenue > 0 && (
+                <div className="absolute bottom-0 left-0 right-0 flex flex-col items-center gap-1 pointer-events-none">
+                  <span className="text-[10px] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap bg-background border rounded px-1 py-0.5 shadow-sm">
+                    {fmtCurrency(revenue)}
+                  </span>
+                </div>
+              )}
+              <div
+                className="w-full bg-green-500/80 hover:bg-green-500 rounded-t transition-colors"
+                style={{ height: `${heightPct}%` }}
+              />
+            </div>
+          );
+        })}
+      </div>
+      <div className="flex gap-1.5">
+        {data.map(({ month }) => (
+          <div key={month} className="flex-1 text-center">
+            <span className="text-[10px] text-muted-foreground">{month}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ProjectStatusBar({
+  planned,
+  inProgress,
+  completed,
+}: {
+  planned: number;
+  inProgress: number;
+  completed: number;
+}) {
+  const total = planned + inProgress + completed;
+
+  if (total === 0) {
+    return <p className="text-sm text-muted-foreground py-1">No projects yet</p>;
+  }
+
+  const pct = (n: number) => `${((n / total) * 100).toFixed(1)}%`;
+
+  return (
+    <div className="space-y-3">
+      <div className="flex h-2.5 rounded-full overflow-hidden gap-0.5">
+        {planned > 0 && (
+          <div className="bg-slate-400 rounded-full" style={{ width: `${(planned / total) * 100}%` }} />
+        )}
+        {inProgress > 0 && (
+          <div className="bg-blue-500 rounded-full" style={{ width: `${(inProgress / total) * 100}%` }} />
+        )}
+        {completed > 0 && (
+          <div className="bg-green-500 rounded-full" style={{ width: `${(completed / total) * 100}%` }} />
+        )}
+      </div>
+      <div className="grid grid-cols-3 gap-1 text-xs">
+        <div className="flex items-center gap-1.5">
+          <span className="h-2 w-2 rounded-full bg-slate-400 shrink-0" />
+          <span className="text-muted-foreground truncate">{planned} <span className="hidden sm:inline">Planned</span></span>
+          <span className="text-muted-foreground ml-auto">{pct(planned)}</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="h-2 w-2 rounded-full bg-blue-500 shrink-0" />
+          <span className="text-muted-foreground truncate">{inProgress} <span className="hidden sm:inline">Active</span></span>
+          <span className="text-muted-foreground ml-auto">{pct(inProgress)}</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="h-2 w-2 rounded-full bg-green-500 shrink-0" />
+          <span className="text-muted-foreground truncate">{completed} <span className="hidden sm:inline">Done</span></span>
+          <span className="text-muted-foreground ml-auto">{pct(completed)}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function InvoiceStatusBar({
+  invoices,
+}: {
+  invoices: { draft: number; sent: number; paid: number; overdue: number };
+}) {
+  const { draft, sent, paid, overdue } = invoices;
+  const total = draft + sent + paid + overdue;
+
+  if (total === 0) {
+    return <p className="text-sm text-muted-foreground py-1">No invoices yet</p>;
+  }
+
+  const items = [
+    { label: "Draft", value: draft, color: "bg-slate-400" },
+    { label: "Sent", value: sent, color: "bg-blue-400" },
+    { label: "Paid", value: paid, color: "bg-green-500" },
+    { label: "Overdue", value: overdue, color: "bg-red-500" },
+  ].filter((i) => i.value > 0);
+
+  return (
+    <div className="space-y-3">
+      <div className="flex h-2.5 rounded-full overflow-hidden gap-0.5">
+        {items.map(({ label, value, color }) => (
+          <div
+            key={label}
+            className={`${color} rounded-full`}
+            style={{ width: `${(value / total) * 100}%` }}
+          />
+        ))}
+      </div>
+      <div className="grid grid-cols-2 gap-1 text-xs">
+        {items.map(({ label, value, color }) => (
+          <div key={label} className="flex items-center gap-1.5">
+            <span className={`h-2 w-2 rounded-full ${color} shrink-0`} />
+            <span className="text-muted-foreground">{value} {label}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Shared components ─────────────────────────────────────────────────────────
 
 function StatCard({ label, value, color, sub }: { label: string; value: number; color: string; sub?: string }) {
   return (
