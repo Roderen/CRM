@@ -134,7 +134,7 @@ export function GlobalSearch() {
   };
 
   return (
-    <div ref={containerRef} className="relative flex-1 max-w-md">
+    <div ref={containerRef} className="relative w-full">
       <div className="relative">
         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
         {loading && (
@@ -156,18 +156,18 @@ export function GlobalSearch() {
           {results.map((item, i) => (
             <button
               key={`${item.type}-${item.id}`}
-              className={`w-full flex items-center gap-2.5 px-3 py-2 text-left text-sm transition-colors ${
+              className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-left text-sm transition-colors ${
                 i === cursor ? "bg-accent" : "hover:bg-accent"
               }`}
               onMouseEnter={() => setCursor(i)}
               onMouseDown={(e) => { e.preventDefault(); navigate(item); }}
             >
-              {typeIcon[item.type]}
+              <span className="shrink-0">{typeIcon[item.type]}</span>
               <span className="flex-1 min-w-0">
                 <span className="font-medium truncate block">{item.label}</span>
                 <span className="text-xs text-muted-foreground truncate block">{item.sub}</span>
               </span>
-              <span className="text-[10px] text-muted-foreground shrink-0 bg-muted rounded px-1.5 py-0.5">
+              <span className="hidden sm:inline-block text-[10px] text-muted-foreground shrink-0 bg-muted rounded px-1.5 py-0.5">
                 {typeLabel[item.type]}
               </span>
             </button>
